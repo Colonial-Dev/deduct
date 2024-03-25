@@ -16,6 +16,7 @@ pub mod consts {
 }
 
 pub use sentence::*;
+pub use citation::*;
 
 /// Normalize operator shorthands.
 fn normalize_ops(i: &str) -> String {

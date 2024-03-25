@@ -3,7 +3,7 @@ mod parse;
 pub use crate::parse::*;
 
 fn main() {
-    println!("{:#?}", Sentence::parse("◇A"));
+    println!("{:#?}", Sentence::parse("◇(A -> B) ^ (C <-> D)"));
 }
 
 

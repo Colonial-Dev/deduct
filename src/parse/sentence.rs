@@ -144,8 +144,6 @@ impl Sentence {
 
         let main_op_p = main_op_p.expect("Main operator position should be known");
 
-        println!("{i} {main_op_p} {main_op_c}");
-
         if matches!(main_op_c.as_str(), NEG | NEC | POS) {
             if main_op_p != 0 {
                 return Err(ParseError::BadUnary)
@@ -177,7 +175,8 @@ impl Sentence {
         }
     }
 
-    pub fn box_up(self) -> Box<Self> {
+    #[cfg(test)]
+    fn box_up(self) -> Box<Self> {
         Box::new(self)
     }
 }
