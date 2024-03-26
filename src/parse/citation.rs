@@ -1,21 +1,22 @@
-use std::ops::RangeInclusive;
+use std::fmt::Display;
 
 use once_cell::sync::Lazy;
 use regex::Regex;
 
 use super::normalize_ops;
 use super::ParseError;
+use super::LineRange;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum LineNumber {
     One(u16),
-    Many(RangeInclusive<u16>)
+    Many(LineRange)
 }
 
 impl LineNumber {
     pub fn parse(i: &str) -> Result<Self, ParseError> {
         static NUM_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r#"\d{1,}"#).unwrap() );
-        
+
         match NUM_REGEX.find_iter(i).count() {
             0 | 3.. => Err(ParseError::BadLineNumber),
             1 => {
@@ -58,6 +59,17 @@ impl LineNumber {
     }
 }
 
+impl Display for LineNumber {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::One(n)  => write!(f, "{n}")?,
+            Self::Many(r) => write!(f, "{}-{}", r.start(), r.end())?
+        }
+
+        Ok(())
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct Citation {
     pub r: String,
@@ -88,7 +100,13 @@ impl Citation {
             .chars()
             .skip_while(|c| !c.is_ascii_digit() )
             .collect();
+        
+        let l = l.trim().to_owned();
 
+        if l.is_empty() {
+            return Ok(Self { r, l: vec![] })
+        }
+        
         let l = SEP_REGEX
             .replace_all(&l, ",")
             .split(',')
@@ -99,6 +117,18 @@ impl Citation {
             })?;
 
         Ok(Self{ r, l })
+    }
+}
+
+impl Display for Citation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} ", self.r)?;
+
+        for line in &self.l {
+            write!(f, "{line} ")?;
+        }
+
+        Ok(())
     }
 }
 

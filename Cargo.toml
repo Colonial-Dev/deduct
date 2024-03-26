@@ -12,6 +12,9 @@ license     = "AGPL-3.0"
 lto = "fat"
 codegen-units = 1
 
+[profile.dev.package."*"]
+opt-level = 2
+
 [dependencies]
 # GUI
 egui = "0.26.2"

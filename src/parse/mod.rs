@@ -1,3 +1,5 @@
+use std::ops::RangeInclusive;
+
 use once_cell::sync::Lazy;
 use regex::Regex;
 use thiserror::Error;
@@ -19,6 +21,7 @@ pub mod consts {
 pub use sentence::Sentence;
 pub use citation::Citation;
 
+pub type LineRange   = RangeInclusive<u16>;
 pub type ParseErrors = Vec<(u16, ParseError)>;
 
 #[derive(Debug, Error, PartialEq, Eq)]
@@ -55,12 +58,61 @@ pub struct Line {
     pub d: u16,
 }
 
-pub fn parse_proof<'a, I>(i: I) -> Result<(), ParseErrors> where
-    I: AsRef<[(u16, &'a str, &'a str)]>
-{
-    let i = i.as_ref();
+#[derive(Debug, PartialEq, Eq)]
+pub struct Proof {
+    pub lines: Vec<Line>,
+}
 
-    todo!()
+impl Proof {
+    pub fn parse<'a, I>(i: I) -> Result<Self, ParseErrors> 
+    where
+        I: AsRef<[(u16, &'a str, &'a str)]>
+    {
+        let i = i.as_ref();
+
+        let mut lines = vec![];
+        let mut error = vec![];
+
+        for (i, l) in i
+            .iter()
+            .enumerate()
+            .map(|(i, l)| (i + 1, l) )
+        {
+            let (depth, sentence, citation) = l;
+
+            let s = Sentence::parse(sentence);
+            let c = Citation::parse(citation);
+
+            if s.is_ok() && c.is_ok() {
+                // Can't do multiple if lets in one line (yet)
+                #[allow(clippy::unnecessary_unwrap)]
+                lines.push(Line {
+                    s: s.unwrap(),
+                    c: c.unwrap(),
+                    l: i as u16,
+                    d: *depth,
+                })
+            } else {
+                if let Err(e) = s {
+                    error.push( (i as u16, e) )
+                };
+
+                if let Err(e) = c {
+                    error.push( (i as u16, e) );
+                }
+            }
+        }
+
+        if !error.is_empty() {
+            return Err(error);
+        }
+
+        Ok(Self { lines })
+    }
+
+    pub fn subproof(r: LineRange) -> Option<(Sentence, Sentence)> {
+        todo!()
+    }
 }
 
 /// Normalize operator shorthands in a given string.
