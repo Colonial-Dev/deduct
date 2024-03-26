@@ -2,10 +2,9 @@ use std::ops::RangeInclusive;
 
 use once_cell::sync::Lazy;
 use regex::Regex;
-use thiserror::Error;
 
 use super::normalize_ops;
-use super::consts::*;
+use super::ParseError;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum LineNumber {
@@ -57,18 +56,6 @@ impl LineNumber {
             },
         }
     }
-}
-
-#[derive(Debug, Error, PartialEq, Eq)]
-pub enum ParseError {
-    #[error("empty citation")]
-    EmptyCitation,
-    #[error("citation does not cite a rule")]
-    MissingRule,
-    #[error("malformed line number")]
-    BadLineNumber,
-    #[error("line number too large")]
-    OversizeValue,
 }
 
 #[derive(Debug, PartialEq, Eq)]

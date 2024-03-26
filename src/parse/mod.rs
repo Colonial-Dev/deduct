@@ -1,5 +1,6 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
+use thiserror::Error;
 
 mod citation;
 mod sentence;
@@ -15,11 +16,55 @@ pub mod consts {
     pub const POS: &str = "◇";
 }
 
-pub use sentence::*;
-pub use citation::*;
+pub use sentence::Sentence;
+pub use citation::Citation;
 
-/// Normalize operator shorthands.
-fn normalize_ops(i: &str) -> String {
+pub type ParseErrors = Vec<(u16, ParseError)>;
+
+#[derive(Debug, Error, PartialEq, Eq)]
+pub enum ParseError {
+    #[error("empty sentence")]
+    EmptySentence,
+    #[error("unbalanced parentheses")]
+    UnbalancedParentheses,
+    #[error("encountered invalid character(s) {0:?}")]
+    InvalidCharacter(Vec<String>),
+    #[error("too many operators or too few parentheses to disambiguate")]
+    Ambiguous,
+    #[error("missing connective/operator or misplaced parentheses")]
+    MissingOp,
+    #[error("misuse of unary operator internally in sentence")]
+    BadUnary,
+    #[error("misuse of contradiction symbol internally in sentence")]
+    BadContradiction,
+    #[error("empty citation")]
+    EmptyCitation,
+    #[error("citation does not cite a rule")]
+    MissingRule,
+    #[error("malformed line number")]
+    BadLineNumber,
+    #[error("line number too large")]
+    OversizeValue,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct Line {
+    pub s: Sentence,
+    pub c: Citation,
+    pub l: u16,
+    pub d: u16,
+}
+
+pub fn parse_proof<'a, I>(i: I) -> Result<(), ParseErrors> where
+    I: AsRef<[(u16, &'a str, &'a str)]>
+{
+    let i = i.as_ref();
+
+    todo!()
+}
+
+/// Normalize operator shorthands in a given string.
+pub fn normalize_ops(i: &str) -> String {
     use std::ops::Deref;
     use consts::*;
     

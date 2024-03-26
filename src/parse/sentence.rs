@@ -1,27 +1,9 @@
 use once_cell::sync::Lazy;
-use thiserror::Error;
 use regex::Regex;
 
 use super::normalize_ops;
+use super::ParseError;
 use super::consts::*;
-
-#[derive(Debug, Error, PartialEq, Eq)]
-pub enum ParseError {
-    #[error("empty sentence")]
-    EmptySentence,
-    #[error("unbalanced parentheses")]
-    UnbalancedParentheses,
-    #[error("encountered invalid character(s) {0:?}")]
-    InvalidCharacter(Vec<String>),
-    #[error("too many operators or too few parentheses to disambiguate")]
-    Ambiguous,
-    #[error("missing connective/operator or misplaced parentheses")]
-    MissingOp,
-    #[error("misuse of unary operator internally in sentence")]
-    BadUnary,
-    #[error("misuse of contradiction symbol internally in sentence")]
-    BadContradiction,
-}
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub enum Sentence {
