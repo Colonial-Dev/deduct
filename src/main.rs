@@ -119,7 +119,7 @@ fn main() {
     };
 
     eframe::run_native(
-        "eframe template",
+        &format!("Deduct v{}", env!("CARGO_PKG_VERSION")),
         native_options,
         Box::new(|cc| Box::new(TemplateApp::new(cc))),
     ).unwrap();

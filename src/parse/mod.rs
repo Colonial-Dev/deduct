@@ -19,7 +19,7 @@ pub mod consts {
 }
 
 pub use sentence::Sentence;
-pub use citation::Citation;
+pub use citation::{Citation, LineNumber, LineNumberType};
 
 pub type LineRange   = RangeInclusive<u16>;
 pub type ParseErrors = Vec<(u16, ParseError)>;
@@ -46,6 +46,8 @@ pub enum ParseError {
     MissingRule,
     #[error("malformed line number")]
     BadLineNumber,
+    #[error("cited a line range with the end at or before the start")]
+    BadLineRange,
     #[error("line number too large")]
     OversizeValue,
 }
@@ -56,6 +58,12 @@ pub struct Line {
     pub c: Citation,
     pub l: u16,
     pub d: u16,
+}
+
+impl Line {
+    pub fn cited_lines(&self) -> &[LineNumber] {
+        self.c.l.as_slice()
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -110,7 +118,23 @@ impl Proof {
         Ok(Self { lines })
     }
 
-    pub fn subproof(r: LineRange) -> Option<(Sentence, Sentence)> {
+    pub fn line(&self, n: u16) -> Option<&Line> {
+        self.lines.get(n as usize - 1)
+    }
+
+    pub fn depth(&self, n: u16) -> Option<u16> {
+        self.line(n).map(|n| n.d)
+    }
+
+    pub fn sentence(&self, n: u16) -> Option<&Sentence> {
+        self.line(n).map(|n| &n.s)
+    }
+
+    pub fn citation(&self, n: u16) -> Option<&Citation> {
+        self.line(n).map(|n| &n.c)
+    }
+    
+    pub fn subproof(&self, r: LineRange) -> Option<(&Sentence, &Sentence)> {
         todo!()
     }
 }
