@@ -7,6 +7,22 @@ use crate::parse::*;
 const BOT: char = '⊥';
 const NEC: char = '□';
 
+pub const TFL_BASIC: &[(&str, &dyn Rule)] = &[
+    ("R", &Reiteration),
+    ("∧I", &ConjunctionIntr),
+    ("∧E", &ConjunctionElim),
+    ("∨I", &DisjunctionIntr),
+    ("∨E", &DisjunctionElim),
+    // ("→I", &ConditionalIntr),
+    // ("→E", &ConditionalElim),
+    ("↔I", &BiconditionalIntr),
+    ("↔E", &BiconditionalElim),
+    ("¬I", &NegationIntr),
+    ("¬E", &NegationElim),
+    ("IP", &IndirectProof),
+    ("X", &Explosion),
+];
+
 pub struct RuleIndex {
     rules: HashMap<&'static str, &'static dyn Rule>
 }
@@ -340,6 +356,55 @@ impl Rule for DisjunctionElim {
         } else {
             Err(CheckError::BadUsage)
         }
+    }
+}
+
+struct ConditionalIntr;
+
+impl Rule for ConditionalIntr {
+    fn line_ord(&self) -> &[LineNumberType] {
+        &[LineNumberType::Many]
+    }
+
+    fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
+        let (p, c) = cited_subproof(p, l, 0)?;
+
+        let Sentence::Imp(lhs, rhs) = &l.s else {
+            return Err(CheckError::BadUsage)
+        };
+
+        if **lhs == *p && **rhs == *c {
+            Ok(())
+        } else {
+            Err(CheckError::BadUsage)
+        }
+    }
+}
+
+struct ConditionalElim;
+
+impl Rule for ConditionalElim {
+    fn line_ord(&self) -> &[LineNumberType] {
+        &[LineNumberType::One, LineNumberType::One]
+    }
+
+    fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
+        let s_1 = cited_sentence(p, l, 0)?;
+        let s_2 = cited_sentence(p, l, 0)?;
+        
+        if let Sentence::Imp(lhs, rhs) = s_1 {
+            if **lhs == *s_2 && **rhs == l.s {
+                return Ok(())
+            }
+        }
+
+        if let Sentence::Imp(lhs, rhs) = s_2 {
+            if **lhs == *s_1 && **rhs == l.s {
+                return Ok(())
+            }
+        }
+
+        Err(CheckError::BadUsage)
     }
 }
 
