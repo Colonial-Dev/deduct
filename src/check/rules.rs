@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use thiserror::Error;
 
 use crate::parse::*;
@@ -7,14 +5,16 @@ use crate::parse::*;
 const BOT: char = '⊥';
 const NEC: char = '□';
 
+pub type CheckErrors = Vec<(u16, CheckError)>;
+
 pub const TFL_BASIC: &[(&str, &dyn Rule)] = &[
     ("R", &Reiteration),
     ("∧I", &ConjunctionIntr),
     ("∧E", &ConjunctionElim),
     ("∨I", &DisjunctionIntr),
     ("∨E", &DisjunctionElim),
-    // ("→I", &ConditionalIntr),
-    // ("→E", &ConditionalElim),
+    ("→I", &ConditionalIntr),
+    ("→E", &ConditionalElim),
     ("↔I", &BiconditionalIntr),
     ("↔E", &BiconditionalElim),
     ("¬I", &NegationIntr),
@@ -23,20 +23,6 @@ pub const TFL_BASIC: &[(&str, &dyn Rule)] = &[
     ("X", &Explosion),
 ];
 
-pub struct RuleIndex {
-    rules: HashMap<&'static str, &'static dyn Rule>
-}
-
-// BASIC
-// - Reiteration
-// - Conjunction I/E
-// - Disjunction I/E
-// - Conditional I/E
-// - Biconditional I/E
-// - Negation I
-// - Negation E (contradiction)
-// - Explosion
-// - Indirect proof
 // DERIVED
 // - BASIC +
 // - DS (Disjunctive syllogism)
@@ -141,7 +127,9 @@ pub trait Rule {
 
                 // If the line after the end doesn't have a lower depth,
                 // then the subproof has not been closed.
-                if p.line(*s + 1).map(|l| l.d).unwrap() >= ed {
+                let next = p.line(*e + 1).unwrap();
+
+                if next.d >= ed && !next.is_premise() {
                     return true;
                 }
 
@@ -243,6 +231,18 @@ fn cited_subproof<'a>(p: &'a Proof, l: &Line, n: usize) -> Result<(&'a Sentence,
         &p.line( *range.start() ).unwrap().s,
         &p.line( *range.end() ).unwrap().s
     ))
+}
+
+pub struct Premise;
+
+impl Rule for Premise {
+    fn line_ord(&self) -> &[LineNumberType] {
+        &[]
+    }
+
+    fn is_right(&self, _p: &Proof, _l: &Line) -> Result<(), CheckError> {
+        Ok(())
+    }
 }
 
 struct Reiteration;
@@ -390,7 +390,7 @@ impl Rule for ConditionalElim {
 
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
         let s_1 = cited_sentence(p, l, 0)?;
-        let s_2 = cited_sentence(p, l, 0)?;
+        let s_2 = cited_sentence(p, l, 1)?;
         
         if let Sentence::Imp(lhs, rhs) = s_1 {
             if **lhs == *s_2 && **rhs == l.s {
@@ -505,7 +505,7 @@ impl Rule for NegationElim {
             }
         }
 
-        if let Sentence::Neg(s_2) = s_1 {
+        if let Sentence::Neg(s_2) = s_2 {
             if **s_2 == *s_1 {
                 return Ok(())
             } else {
@@ -559,8 +559,4 @@ impl Rule for IndirectProof {
 
         Ok(())
     }
-}
-#[cfg(test)]
-mod tests {
-    use super::*;
 }

@@ -64,6 +64,10 @@ impl Line {
     pub fn cited_lines(&self) -> &[LineNumber] {
         self.c.l.as_slice()
     }
+
+    pub fn is_premise(&self) -> bool {
+        self.c.r == "PR"
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
