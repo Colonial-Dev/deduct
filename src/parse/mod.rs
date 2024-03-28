@@ -56,7 +56,7 @@ pub enum ParseError {
 pub struct Line {
     pub s: Sentence,
     pub c: Citation,
-    pub l: u16,
+    pub n: u16,
     pub d: u16,
 }
 
@@ -97,7 +97,7 @@ impl Proof {
                 lines.push(Line {
                     s: s.unwrap(),
                     c: c.unwrap(),
-                    l: i as u16,
+                    n: i as u16,
                     d: *depth,
                 })
             } else {
@@ -117,25 +117,14 @@ impl Proof {
 
         Ok(Self { lines })
     }
+    
+    #[allow(clippy::len_without_is_empty)]
+    pub fn len(&self) -> usize {
+        self.lines.len()
+    }
 
     pub fn line(&self, n: u16) -> Option<&Line> {
         self.lines.get(n as usize - 1)
-    }
-
-    pub fn depth(&self, n: u16) -> Option<u16> {
-        self.line(n).map(|n| n.d)
-    }
-
-    pub fn sentence(&self, n: u16) -> Option<&Sentence> {
-        self.line(n).map(|n| &n.s)
-    }
-
-    pub fn citation(&self, n: u16) -> Option<&Citation> {
-        self.line(n).map(|n| &n.c)
-    }
-    
-    pub fn subproof(&self, r: LineRange) -> Option<(&Sentence, &Sentence)> {
-        todo!()
     }
 }
 

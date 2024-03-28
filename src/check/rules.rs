@@ -1,8 +1,15 @@
+use std::collections::HashMap;
+
 use thiserror::Error;
 
 use crate::parse::*;
 
-pub struct RuleIndex;
+const BOT: char = '⊥';
+const NEC: char = '□';
+
+pub struct RuleIndex {
+    rules: HashMap<&'static str, &'static dyn Rule>
+}
 
 // BASIC
 // - Reiteration
@@ -54,7 +61,7 @@ pub trait Rule {
             return Err(CheckError::BadLineCount)
         }
 
-        // Ensure expected line number types match the actual
+        // Ensure expected line number types match the actual types.
         if self
             .line_ord()
             .iter()
@@ -64,22 +71,117 @@ pub trait Rule {
             return Err(CheckError::BadLineType)
         }
 
-        // Ensure we are not citing ourselves or the future
+        // Ensure we are not citing ourselves or the future.
+        // This also captures lines that do not exist.
         if l
             .cited_lines()
             .iter()
-            .map(|l| match l {
-                LineNumber::One(n) => n,
-                LineNumber::Many(r) => r.start()
+            .any(|ln| match ln {
+                // Single line citations must be at least one,
+                // and cannot refer to current or future lines.
+                LineNumber::One(n) => *n >= l.n || *n < 1,
+                // The start of a line range must be at least 1, and the end must be at least 2.
+                // The end of the line range must not be a current or future line.
+                LineNumber::Many(r) => {
+                    *r.start() < 1 || *r.end() < 2 || *r.end() >= l.n
+                }
             })
-            .any(|n| *n >= l.l)
         {
-            return Err(CheckError::CitingFuture)
+            return Err(CheckError::BadCitation)
         }
 
-        // TODO precheck for citing lines in closed subproofs
-        // TODO precheck for line ranges that do not cite a subproof
-        // TODO precheck for citing non-existent lines
+        // Ensure all line ranges are citing a valid, complete subproof.
+        if l
+            .cited_lines()
+            .iter()
+            .filter_map(|ln| match ln {
+                LineNumber::Many(r) => Some(r),
+                _ => None
+            })
+            .any(|r| {
+                let s = r.start();
+                let e = r.end();
+
+                // These unwraps are safe, as non-existent lines
+                // would have triggered an error in the previous scan.
+                let sd = p.line(*s).map(|l| l.d).unwrap();
+                let ed = p.line(*e).map(|l| l.d).unwrap();
+
+                // If the start or end depths are zero, then this can't be a subproof.
+                // If the start and end have different depths, then the range is oversized.
+                // If the end is greater than or equal to the current line, then the subproof has not been closed.
+                if (sd < 1 || ed < 1) || (sd != ed) || (sd >= l.n) {
+                    return true;
+                }
+                
+                // If any line within the bounds of the alleged subproof
+                // has a depth *less than* that of the start line, then
+                // the range is oversized.
+                for n in r.clone() {
+                    if p.line(n).map(|l| l.d).unwrap() < sd {
+                        return true;
+                    }
+                }
+
+                // If the line after the end doesn't have a lower depth,
+                // then the subproof has not been closed.
+                if p.line(*s + 1).map(|l| l.d).unwrap() >= ed {
+                    return true;
+                }
+
+                false
+            })
+        {
+            return Err(CheckError::BadRange)
+        }
+
+        // Accessibility index for the line being validated.
+        let mut access_idx = vec![false; p.len()];
+
+        // Precompute accessibility relative to all previous lines in the proof.
+        // (Future lines are by definition inaccessible.)
+        //
+        // The ceiling value is initialized to the depth of the current line.
+        let mut ceil = l.d;
+
+        // Step backwards through the proof from the current line.
+        for n in (l.n..=1).rev() {
+            let d = p.line(n).map(|l| l.d).unwrap();
+
+            #[allow(clippy::comparison_chain)]
+            // If the line's depth is equal to the ceiling value, it is reachable.
+            if d == ceil {
+                access_idx[n as usize - 1] = true;
+            }
+            // If the line is shallower than the ceiling value, it is reachable,
+            // but the ceiling is lowered to match.
+            else if d < ceil {
+                access_idx[n as usize - 1] = true;
+                ceil -= 1;
+            } 
+            // If the line is greater than the ceiling value, it is not reachable.
+            else {
+                access_idx[n as usize - 1] = false;
+            }
+        }
+
+        // Ensure that no unavailable lines or subproofs are being cited.
+        if l
+            .cited_lines()
+            .iter()
+            .any(|ln| match ln {
+                LineNumber::One(n) => {
+                    access_idx[*n as usize - 1]
+                }
+                LineNumber::Many(r) => {
+                    // We only need to check the start depth,
+                    // as subproof range validity was checked in the previous scan.
+                    access_idx[*r.start() as usize - 1]
+                }
+            })
+        {
+            return Err(CheckError::Unavailable)
+        }
 
         self.is_right(p, l)?;
 
@@ -95,26 +197,36 @@ pub enum CheckError {
     BadLineCount,
     #[error("cited a line range where a single line was expected (or vice versa)")]
     BadLineType,
-    #[error("cited a line that does not exist")]
-    NoSuchLine,
     #[error("cited a rule that was used incorrectly")]
     BadUsage,
-    #[error("cited the current line or one that occurs in the future")]
-    CitingFuture,
-    #[error("cited a line in a closed subproof")]
-    CitingClosed,
+    #[error("cited a current or future line, or a line that does not exist")]
+    BadCitation,
+    #[error("cited a line range that does not correspond to a subproof")]
+    BadRange,
+    #[error("cited an unavailable line or subproof")]
+    Unavailable,
 }
+
+/* enum Citations<'a> {
+    One(&'a Sentence),
+    Many(&'a Sentence, &'a Sentence)
+} */
 
 fn cited_sentence<'a>(p: &'a Proof, l: &Line, n: usize) -> Result<&'a Sentence, CheckError> {
     let Some(l) = p.line( l.cited_lines()[n].as_one() ) else {
-        return Err(CheckError::NoSuchLine)
+        return Err(CheckError::BadCitation)
     };
 
     Ok(&l.s)
 }
 
 fn cited_subproof<'a>(p: &'a Proof, l: &Line, n: usize) -> Result<(&'a Sentence, &'a Sentence), CheckError> {
-    todo!()
+    let range = l.cited_lines()[n].as_many();
+
+    Ok((
+        &p.line( *range.start() ).unwrap().s,
+        &p.line( *range.end() ).unwrap().s
+    ))
 }
 
 struct Reiteration;
@@ -216,17 +328,174 @@ impl Rule for DisjunctionElim {
             return Err(CheckError::BadUsage)
         };
 
-        let (pa, ca) = cited_subproof(p, l, 1)?;
-        let (pb, cb) = cited_subproof(p, l, 2)?;
+        let (p_1, c_1) = cited_subproof(p, l, 1)?;
+        let (p_2, c_2) = cited_subproof(p, l, 2)?;
 
-        if (*ca != l.s) || (*cb != l.s) {
+        if (*c_1 != l.s) || (*c_2 != l.s) {
             return Err(CheckError::BadUsage)
         }
 
-        if !((*pa == **lhs || *pa == **rhs) && (*pb == **lhs || *pb == **rhs)) {
+        if (*p_1 == **lhs && *p_2 == **rhs) || (*p_1 == **rhs && *p_2 == **lhs) {
+            Ok(())
+        } else {
+            Err(CheckError::BadUsage)
+        }
+    }
+}
 
+struct BiconditionalIntr;
+
+impl Rule for BiconditionalIntr {
+    fn line_ord(&self) -> &[LineNumberType] {
+        &[LineNumberType::Many, LineNumberType::Many]
+    }
+    
+    fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
+        let (p_1, c_1) = cited_subproof(p, l, 0)?;
+        let (p_2, c_2) = cited_subproof(p, l, 1)?;
+
+        let Sentence::Bic(lhs, rhs) = &l.s else {
+            return Err(CheckError::BadUsage)
+        };
+
+        if (**lhs == *p_1 && **rhs == *p_2) && (**lhs == *c_2 && **rhs == *c_1) {
+            return Ok(())
         }
 
-        todo!()
+        if (**lhs == *p_2 && **rhs == *p_1) && (**lhs == *c_1 && **rhs == *c_2) {
+            return Ok(())
+        }
+
+        Err(CheckError::BadUsage)
     }
+}
+
+struct BiconditionalElim;
+
+impl Rule for BiconditionalElim {
+    fn line_ord(&self) -> &[LineNumberType] {
+        &[LineNumberType::One, LineNumberType::One]
+    }
+
+    fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
+        let s_1 = cited_sentence(p, l, 0)?;
+        let s_2 = cited_sentence(p, l, 1)?;
+
+        let Sentence::Bic(lhs, rhs) = s_1 else {
+            return Err(CheckError::BadUsage)
+        };
+
+        if (**lhs == *s_2 && **rhs == l.s) || (**rhs == *s_2 && **lhs == l.s) {
+            return Ok(())
+        }
+
+        Err(CheckError::BadUsage)
+    }
+}
+
+struct NegationIntr;
+
+impl Rule for NegationIntr {
+    fn line_ord(&self) -> &[LineNumberType] {
+        &[LineNumberType::Many]
+    }
+
+    fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
+        let (p, c) = cited_subproof(p, l, 0)?;
+
+        let Sentence::Signal(BOT) = c else {
+            return Err(CheckError::BadUsage)
+        };
+
+        if let Sentence::Neg(s) = &l.s {
+            if **s == *p {
+                return Ok(())
+            }
+        }
+
+        Err(CheckError::BadUsage)
+    }
+}
+
+struct NegationElim;
+
+impl Rule for NegationElim {
+    fn line_ord(&self) -> &[LineNumberType] {
+        &[LineNumberType::One, LineNumberType::One]
+    }
+
+    fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
+        let s_1 = cited_sentence(p, l, 0)?;
+        let s_2 = cited_sentence(p, l, 1)?;
+
+        let Sentence::Signal(BOT) = &l.s else {
+            return Err(CheckError::BadUsage)
+        };
+
+        if let Sentence::Neg(s_1) = s_1 {
+            if **s_1 == *s_2 {
+                return Ok(())
+            } else {
+                return Err(CheckError::BadUsage)
+            }
+        }
+
+        if let Sentence::Neg(s_2) = s_1 {
+            if **s_2 == *s_1 {
+                return Ok(())
+            } else {
+                return Err(CheckError::BadUsage)
+            }
+        }
+
+        Err(CheckError::BadUsage)
+    }
+}
+
+struct Explosion;
+
+impl Rule for Explosion {
+    fn line_ord(&self) -> &[LineNumberType] {
+        &[LineNumberType::One]
+    }
+    
+    fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
+        let source = cited_sentence(p, l, 0)?;
+
+        let Sentence::Signal(BOT) = source else {
+            return Err(CheckError::BadUsage)
+        };
+
+        Ok(())
+    }
+}
+
+struct IndirectProof;
+
+impl Rule for IndirectProof {
+    fn line_ord(&self) -> &[LineNumberType] {
+        &[LineNumberType::Many]
+    }
+
+    fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
+        let (p, c) = cited_subproof(p, l, 0)?;
+
+        let Sentence::Neg(p) = p else {
+            return Err(CheckError::BadUsage)
+        };
+
+        let Sentence::Signal(BOT) = c else {
+            return Err(CheckError::BadUsage)
+        };
+
+        if **p != l.s {
+            return Err(CheckError::BadUsage)
+        }
+
+        Ok(())
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
 }
