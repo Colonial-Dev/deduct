@@ -362,4 +362,51 @@ mod tests {
             0, "~(A ^ B)", "DeM 1",
         }
     }
+
+    #[test]
+    fn complex_tfl_derived() {
+
+    }
+
+    #[test]
+    fn necessity_intr() {
+
+    }
+
+    #[test]
+    fn necessity_elim() {
+
+    }
+
+    #[test]
+    fn possibility_def() {
+
+    }
+
+    #[test]
+    fn modal_conversion() {
+
+    }
+
+    #[test]
+    fn rule_t() {
+
+    }
+
+    #[test]
+    fn rule_four() {
+
+    }
+
+    #[test]
+    fn rule_five() {
+
+    }
+
+    #[test]
+    fn complex_modal() {
+
+    }
+
+    // TODO add error condition tests
 }

@@ -32,13 +32,6 @@ pub const TFL_DERIVED: &[(&str, &dyn Rule)] = &[
     ("DEM", &DeMorgan),
 ];
 
-// DERIVED
-// - BASIC +
-// - DS (Disjunctive syllogism)
-// - MT (Modus tollens)
-// - DNE
-// - LEM
-// - DeM
 // SYSTEM_K
 // - BASIC + DERIVED
 // - Necessity I/E
@@ -53,13 +46,6 @@ pub const TFL_DERIVED: &[(&str, &dyn Rule)] = &[
 // SYSTEM_S5
 // - SYSTEM_S4 +
 // - R5
-// PREMISE (DEDUCT_INTERNAL_PREMISE_DO_NOT_USE)
-// - Special, internal rule injected to qualify premises.
-// - Cannot be referenced by the user.
-// PLACEHOLDER
-// - Special, non-standard rule. Similar to a premise, but usable anywhere and always validates the cited line.
-// - Can be used to silence the checker when working on a different part of the proof.
-// - Checker will point out a proof that is valid but still contains placeholder citations.
 pub trait Rule {
     /// Returns the order and type of lines uses of this rule should cite.
     fn line_ord(&self) -> &[LineNumberType];
@@ -195,6 +181,8 @@ pub trait Rule {
         {
             return Err(CheckError::Unavailable)
         }
+
+        // TODO add strict subproof adherence check
 
         self.is_right(p, l)?;
 
@@ -723,14 +711,14 @@ impl Rule for DeMorgan {
                 }
             },
             Sentence::Con(lhs, rhs) => {
-                if let  ( Sentence::Neg(lhs), Sentence::Neg(rhs) ) = (&**lhs, &**rhs) {
+                if let ( Sentence::Neg(lhs), Sentence::Neg(rhs) ) = (&**lhs, &**rhs) {
                     if l.s == Sentence::Dis( lhs.clone(), rhs.clone() ).negated() {
                         return Ok(())
                     }
                 }
             },
             Sentence::Dis(lhs, rhs) => {
-                if let  ( Sentence::Neg(lhs), Sentence::Neg(rhs) ) = (&**lhs, &**rhs) {
+                if let ( Sentence::Neg(lhs), Sentence::Neg(rhs) ) = (&**lhs, &**rhs) {
                     if l.s == Sentence::Con( lhs.clone(), rhs.clone() ).negated() {
                         return Ok(())
                     }
@@ -744,6 +732,30 @@ impl Rule for DeMorgan {
 }
 
 struct NecessityIntr;
+
+impl Rule for NecessityIntr {
+    fn line_ord(&self) -> &[LineNumberType] {
+        &[LineNumberType::Many]
+    }
+
+    fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
+        let (p, c) = cited_subproof(p, l, 0)?;
+
+        let Sentence::Signal(NEC) = p else {
+            return Err(CheckError::BadUsage)
+        };
+
+        let Sentence::Nec(s) = &l.s else {
+            return Err(CheckError::BadUsage)
+        };
+
+        if s == c {
+            Ok(())
+        } else {
+            Err(CheckError::BadUsage)
+        }
+    }
+}
 
 struct NecessityElim;
 
