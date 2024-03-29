@@ -285,4 +285,81 @@ mod tests {
             0, "A v (B v C)", "vE 1 2-8 9-11",
         }
     }
+
+    #[test]
+    fn disjunctive_syllogism() {
+        proof! {
+            [TFL_BASIC, TFL_DERIVED],
+            0, "A v B", "PR",
+            0, "~A", "PR",
+            0, "~B", "PR",
+            0, "A", "DS 1 3",
+            0, "B", "DS 1 2",
+            0, "A", "DS 3 1",
+            0, "B", "DS 2 1",
+        }
+    }
+
+    #[test]
+    fn modus_tollens() {
+        proof! {
+            [TFL_BASIC, TFL_DERIVED],
+            0, "A -> B", "PR",
+            0, "~B", "PR",
+            0, "~A", "MT 1 2",
+            0, "~A", "MT 2 1",
+        }
+    }
+
+    #[test]
+    fn dne() {
+        proof! {
+            [TFL_BASIC, TFL_DERIVED],
+            0, "~~A", "PR",
+            0, "~~~B", "PR",
+            0, "A", "DNE 1",
+            0, "~B", "DNE 2",
+        }
+    }
+
+    #[test]
+    fn lem() {
+        proof! {
+            [TFL_BASIC, TFL_DERIVED],
+            0, "B", "PR",
+            1, "A", "PR",
+            1, "B", "R 1",
+            1, "~A", "PR",
+            1, "B", "R 1",
+            0, "B", "LEM 2-3 4-5",
+            0, "B", "LEM 4-5 2-3",
+        }
+    }
+
+    #[test]
+    fn de_morgan() {
+        proof! {
+            [TFL_BASIC, TFL_DERIVED],
+            0, "~(A v B)", "PR",
+            0, "~A ^ ~B", "DeM 1",
+        }
+
+        proof! {
+            [TFL_BASIC, TFL_DERIVED],
+            0, "~A ^ ~B", "PR",
+            0, "~(A v B)", "DeM 1",
+        }
+
+        proof! {
+            [TFL_BASIC, TFL_DERIVED],
+            0, "~(A ^ B)", "PR",
+            0, "~A v ~B", "DeM 1",
+        }
+
+        proof! {
+            [TFL_BASIC, TFL_DERIVED],
+            0, "~A v ~B", "PR",
+            0, "~(A ^ B)", "DeM 1",
+        }
+    }
 }

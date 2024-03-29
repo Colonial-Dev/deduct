@@ -5,7 +5,7 @@ use super::normalize_ops;
 use super::ParseError;
 use super::consts::*;
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub enum Sentence {
     /// An atomic predicate (A-Z, capitals only.)
     Atomic(char),
@@ -157,9 +157,36 @@ impl Sentence {
         }
     }
 
-    #[cfg(test)]
-    fn box_up(self) -> Box<Self> {
+    pub fn negated(&self) -> Self {
+        Self::Neg( self.clone().box_up() )
+    }
+
+    pub fn box_up(self) -> Box<Self> {
         Box::new(self)
+    }
+}
+
+impl PartialEq<&Box<Sentence>> for Sentence {
+    fn eq(&self, other: &&Box<Sentence>) -> bool {
+        *self == ***other
+    }
+}
+
+impl PartialEq<&Box<Sentence>> for &Sentence {
+    fn eq(&self, other: &&Box<Sentence>) -> bool {
+        **self == ***other
+    }
+}
+
+impl PartialEq<Sentence> for &Box<Sentence> {
+    fn eq(&self, other: &Sentence) -> bool {
+        ***self == *other
+    }
+}
+
+impl PartialEq<&Sentence> for &Box<Sentence> {
+    fn eq(&self, other: &&Sentence) -> bool {
+        ***self == **other
     }
 }
 

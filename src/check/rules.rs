@@ -23,6 +23,15 @@ pub const TFL_BASIC: &[(&str, &dyn Rule)] = &[
     ("X", &Explosion),
 ];
 
+pub const TFL_DERIVED: &[(&str, &dyn Rule)] = &[
+    ("DS", &DisjunctiveSyllogism),
+    ("MT", &ModusTollens),
+    ("DNE", &Dne),
+    ("LEM", &Lem),
+    ("DeM", &DeMorgan),
+    ("DEM", &DeMorgan),
+];
+
 // DERIVED
 // - BASIC +
 // - DS (Disjunctive syllogism)
@@ -278,7 +287,7 @@ impl Rule for ConjunctionIntr {
             return Err(CheckError::BadUsage)
         };
 
-        if (**lhs == *s_a || **lhs == *s_b) && (**rhs == *s_a || **rhs == *s_b) {
+        if (lhs == s_a || lhs == s_b) && (rhs == s_a || rhs == s_b) {
             Ok(())
         } else {
             Err(CheckError::BadUsage)
@@ -300,7 +309,7 @@ impl Rule for ConjunctionElim {
             return Err(CheckError::BadUsage)
         };
 
-        match (**lhs == l.s, **rhs == l.s) {
+        match (lhs == l.s, rhs == l.s) {
             (true, _) => Ok(()),
             (_, true) => Ok(()),
             _ => Err(CheckError::BadUsage)
@@ -322,7 +331,7 @@ impl Rule for DisjunctionIntr {
             return Err(CheckError::BadUsage)
         };
 
-        if (**lhs == *source) || (**rhs == *source) {
+        if (lhs == source) || (rhs == source) {
             Ok(())
         } else {
             Err(CheckError::BadUsage)
@@ -351,7 +360,7 @@ impl Rule for DisjunctionElim {
             return Err(CheckError::BadUsage)
         }
 
-        if (*p_1 == **lhs && *p_2 == **rhs) || (*p_1 == **rhs && *p_2 == **lhs) {
+        if (p_1 == lhs && p_2 == rhs) || (p_1 == rhs && p_2 == lhs) {
             Ok(())
         } else {
             Err(CheckError::BadUsage)
@@ -373,7 +382,7 @@ impl Rule for ConditionalIntr {
             return Err(CheckError::BadUsage)
         };
 
-        if **lhs == *p && **rhs == *c {
+        if lhs == p && rhs == c {
             Ok(())
         } else {
             Err(CheckError::BadUsage)
@@ -393,13 +402,13 @@ impl Rule for ConditionalElim {
         let s_2 = cited_sentence(p, l, 1)?;
         
         if let Sentence::Imp(lhs, rhs) = s_1 {
-            if **lhs == *s_2 && **rhs == l.s {
+            if lhs == s_2 && rhs == l.s {
                 return Ok(())
             }
         }
 
         if let Sentence::Imp(lhs, rhs) = s_2 {
-            if **lhs == *s_1 && **rhs == l.s {
+            if lhs == s_1 && rhs == l.s {
                 return Ok(())
             }
         }
@@ -423,11 +432,11 @@ impl Rule for BiconditionalIntr {
             return Err(CheckError::BadUsage)
         };
 
-        if (**lhs == *p_1 && **rhs == *p_2) && (**lhs == *c_2 && **rhs == *c_1) {
+        if (lhs == p_1 && rhs == p_2) && (lhs == c_2 && rhs == c_1) {
             return Ok(())
         }
 
-        if (**lhs == *p_2 && **rhs == *p_1) && (**lhs == *c_1 && **rhs == *c_2) {
+        if (lhs == p_2 && rhs == p_1) && (lhs == c_1 && rhs == c_2) {
             return Ok(())
         }
 
@@ -450,7 +459,7 @@ impl Rule for BiconditionalElim {
             return Err(CheckError::BadUsage)
         };
 
-        if (**lhs == *s_2 && **rhs == l.s) || (**rhs == *s_2 && **lhs == l.s) {
+        if (lhs == s_2 && rhs == l.s) || (rhs == s_2 && lhs == l.s) {
             return Ok(())
         }
 
@@ -473,7 +482,7 @@ impl Rule for NegationIntr {
         };
 
         if let Sentence::Neg(s) = &l.s {
-            if **s == *p {
+            if s == p {
                 return Ok(())
             }
         }
@@ -498,7 +507,7 @@ impl Rule for NegationElim {
         };
 
         if let Sentence::Neg(s_1) = s_1 {
-            if **s_1 == *s_2 {
+            if s_1 == s_2 {
                 return Ok(())
             } else {
                 return Err(CheckError::BadUsage)
@@ -506,7 +515,7 @@ impl Rule for NegationElim {
         }
 
         if let Sentence::Neg(s_2) = s_2 {
-            if **s_2 == *s_1 {
+            if s_2 == s_1 {
                 return Ok(())
             } else {
                 return Err(CheckError::BadUsage)
@@ -553,7 +562,7 @@ impl Rule for IndirectProof {
             return Err(CheckError::BadUsage)
         };
 
-        if **p != l.s {
+        if p != l.s {
             return Err(CheckError::BadUsage)
         }
 
@@ -569,18 +578,170 @@ impl Rule for DisjunctiveSyllogism {
     }
 
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
+        let s_1 = cited_sentence(p, l, 0)?;
+        let s_2 = cited_sentence(p, l, 1)?;
+
+        if let Sentence::Dis(lhs, rhs) = s_1 {
+            let Sentence::Neg(s_2) = s_2 else {
+                return Err(CheckError::BadUsage)
+            };
+
+            if (s_2 == lhs && l.s == rhs) || (s_2 == rhs && l.s == lhs) {
+                return Ok(())
+            }
+        }
         
-        todo!()
+        if let Sentence::Dis(lhs, rhs) = s_2 {
+            let Sentence::Neg(s_1) = s_1 else {
+                return Err(CheckError::BadUsage)
+            };
+
+            if (s_1 == lhs && l.s == rhs) || (s_1 == rhs && l.s == lhs) {
+                return Ok(())
+            }
+        }
+
+        Err(CheckError::BadUsage)
     }
 }
 
 struct ModusTollens;
 
-struct DNE;
+impl Rule for ModusTollens {
+    fn line_ord(&self) -> &[LineNumberType] {
+        &[LineNumberType::One, LineNumberType::One]
+    }
 
-struct LEM;
+    fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
+        let s_1 = cited_sentence(p, l, 0)?;
+        let s_2 = cited_sentence(p, l, 1)?;
+
+        let Sentence::Neg(s) = &l.s else {
+            return Err(CheckError::BadUsage)
+        };
+
+        if let Sentence::Imp(lhs, rhs) = s_1 {
+            let Sentence::Neg(s_2) = s_2 else {
+                return Err(CheckError::BadUsage);
+            };
+
+            if s == lhs && s_2 == rhs {
+                return Ok(())
+            }
+        }
+
+        if let Sentence::Imp(lhs, rhs) = s_2 {
+            let Sentence::Neg(s_1) = s_1 else {
+                return Err(CheckError::BadUsage);
+            };
+
+            if s == lhs && s_1 == rhs {
+                return Ok(())
+            }
+        }
+        
+        Err(CheckError::BadUsage)
+    }
+}
+
+struct Dne;
+
+impl Rule for Dne {
+    fn line_ord(&self) -> &[LineNumberType] {
+        &[LineNumberType::One]
+    }
+
+    fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
+        let s = cited_sentence(p, l, 0)?;
+        
+        let Sentence::Neg(s) = s else {
+            return Err(CheckError::BadUsage)
+        };
+
+        let Sentence::Neg(s) = &**s else {
+            return Err(CheckError::BadUsage)
+        };
+
+        if s == l.s {
+            return Ok(())
+        }
+
+        Err(CheckError::BadUsage)
+    }
+}
+
+struct Lem;
+
+impl Rule for Lem {
+    fn line_ord(&self) -> &[LineNumberType] {
+        &[LineNumberType::Many, LineNumberType::Many]
+    }
+    
+    fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
+        let (p_1, c_1) = cited_subproof(p, l, 0)?;
+        let (p_2, c_2) = cited_subproof(p, l, 1)?;
+
+        if c_1 != c_2 {
+            return Err(CheckError::BadUsage)
+        }
+
+        if (p_1.negated() != *p_2) && (p_2.negated() != *p_1) {
+            return Err(CheckError::BadUsage)
+        }
+
+        if &l.s != c_1 {
+            return Err(CheckError::BadUsage)
+        }
+
+        Ok(())
+    }
+}
 
 struct DeMorgan;
+
+impl Rule for DeMorgan {
+    fn line_ord(&self) -> &[LineNumberType] {
+        &[LineNumberType::One]
+    }
+
+    fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
+        // this is... something
+        match cited_sentence(p, l, 0)? {
+            Sentence::Neg(inner) => {
+                match &**inner {
+                    Sentence::Con(lhs, rhs) => {
+                        if l.s == Sentence::Dis( lhs.negated().box_up(), rhs.negated().box_up() ) {
+                            return Ok(())
+                        }
+                    },
+                    Sentence::Dis(lhs, rhs) => {
+                        if l.s == Sentence::Con( lhs.negated().box_up(), rhs.negated().box_up() ) {
+                            return Ok(())
+                        }
+                    },
+                    _ => ()
+                }
+            },
+            Sentence::Con(lhs, rhs) => {
+                if let  ( Sentence::Neg(lhs), Sentence::Neg(rhs) ) = (&**lhs, &**rhs) {
+                    if l.s == Sentence::Dis( lhs.clone(), rhs.clone() ).negated() {
+                        return Ok(())
+                    }
+                }
+            },
+            Sentence::Dis(lhs, rhs) => {
+                if let  ( Sentence::Neg(lhs), Sentence::Neg(rhs) ) = (&**lhs, &**rhs) {
+                    if l.s == Sentence::Con( lhs.clone(), rhs.clone() ).negated() {
+                        return Ok(())
+                    }
+                }
+            },
+            _ => ()
+        }
+
+        Err(CheckError::BadUsage)
+    }
+}
 
 struct NecessityIntr;
 
