@@ -560,3 +560,38 @@ impl Rule for IndirectProof {
         Ok(())
     }
 }
+
+struct DisjunctiveSyllogism;
+
+impl Rule for DisjunctiveSyllogism {
+    fn line_ord(&self) -> &[LineNumberType] {
+        &[LineNumberType::One, LineNumberType::One]
+    }
+
+    fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
+        
+        todo!()
+    }
+}
+
+struct ModusTollens;
+
+struct DNE;
+
+struct LEM;
+
+struct DeMorgan;
+
+struct NecessityIntr;
+
+struct NecessityElim;
+
+struct PossibilityDef;
+
+struct ModalConversion;
+
+struct RT;
+
+struct R4;
+
+struct R5;

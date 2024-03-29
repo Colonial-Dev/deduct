@@ -49,20 +49,24 @@ impl eframe::App for TemplateApp {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:
 
-            egui::menu::bar(ui, |ui| {
-                // NOTE: no File->Quit on web pages!
-                let is_web = cfg!(target_arch = "wasm32");
-                if !is_web {
-                    ui.menu_button("File", |ui| {
-                        if ui.button("Quit").clicked() {
-                            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                        }
-                    });
-                    ui.add_space(16.0);
-                }
-
-                egui::widgets::global_dark_light_mode_buttons(ui);
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                egui::menu::bar(ui, |ui| {
+                    // NOTE: no File->Quit on web pages!
+                    let is_web = cfg!(target_arch = "wasm32");
+                    if !is_web {
+                        ui.menu_button("File", |ui| {
+                            if ui.button("Quit").clicked() {
+                                ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                            }
+                        });
+                        ui.add_space(16.0);
+                    }
+    
+                    egui::widgets::global_dark_light_mode_buttons(ui);
+                    
+                });
             });
+
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -119,7 +123,7 @@ fn main() {
     };
 
     eframe::run_native(
-        &format!("Deduct v{}", env!("CARGO_PKG_VERSION")),
+        "Deduct",
         native_options,
         Box::new(|cc| Box::new(TemplateApp::new(cc))),
     ).unwrap();

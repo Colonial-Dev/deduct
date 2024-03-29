@@ -13,7 +13,7 @@ pub struct Checker {
 impl Checker {
     pub fn new() -> Self {
         let rules = HashMap::from(
-            [("PR", &Premise as &dyn Rule)]
+            [("PR", &Premise as &dyn Rule), ("?", &Premise as &dyn Rule)]
         );
 
         Self { rules }
