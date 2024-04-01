@@ -72,15 +72,17 @@ impl Line {
     }
 
     pub fn cited_sentence<'p>(&self, p: &'p Proof, n: usize) -> &'p Sentence {
-        &p.line( self.cited_lines()[n].as_one() ).unwrap().s
+        &p.line( self.cited_lines()[n].as_one() )
+            .expect("Cited sentence should be in bounds")
+            .s
     }
 
     pub fn cited_subproof<'p>(&self, p: &'p Proof, n: usize) -> (&'p Sentence, &'p Sentence) {
         let range = self.cited_lines()[n].as_many();
 
         (
-            &p.line( *range.start() ).unwrap().s,
-            &p.line( *range.end() ).unwrap().s
+            &p.line( *range.start() ).expect("Cited sentence should be in bounds").s,
+            &p.line( *range.end() ).expect("Cited sentence should be in bounds").s
         )
     }
 }
@@ -179,8 +181,8 @@ pub fn normalize_ops(i: &str) -> String {
     use std::ops::Deref;
     use consts::*;
     
-    static BIC_REGEX: Lazy<(Regex, &'static str)> = Lazy::new(|| (Regex::new(r#"(?:≡|<\->|<>)"#).unwrap(), BIC) );
-    static IMP_REGEX: Lazy<(Regex, &'static str)> = Lazy::new(|| (Regex::new(r#"(?:⇒|⊃|->|>)"#).unwrap(), IMP) );
+    static BIC_REGEX: Lazy<(Regex, &'static str)> = Lazy::new(|| (Regex::new(r#"(?:≡|<\->)"#).unwrap(), BIC) );
+    static IMP_REGEX: Lazy<(Regex, &'static str)> = Lazy::new(|| (Regex::new(r#"(?:⇒|⊃|\->)"#).unwrap(), IMP) );
     static CON_REGEX: Lazy<(Regex, &'static str)> = Lazy::new(|| (Regex::new(r#"(?:\^|&|\.|·|\*)"#).unwrap(), CON) );
     static DIS_REGEX: Lazy<(Regex, &'static str)> = Lazy::new(|| (Regex::new(r#"v"#).unwrap(), DIS) );
     static NEG_REGEX: Lazy<(Regex, &'static str)> = Lazy::new(|| (Regex::new(r#"(?:~|∼|-|−)"#).unwrap(), NEG) );

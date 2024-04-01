@@ -60,6 +60,34 @@ mod tests {
         };
     }
 
+    macro_rules! bad_proof {
+        ([$($rules:ident),+ $(,)?], [$($errs:expr),+ $(,)?], $($n:literal, $s:literal, $c:literal,)+) => {
+            let p = Proof::parse([ $(($n, $s, $c),)+]).expect("Failed to parse test proof");
+            let r = [$($rules),+];
+            let e = [$($errs),+];
+
+            let mut c = Checker::new();
+
+            for ruleset in r {
+                c.rules.extend( ruleset.iter().map(|(i, r)| (*i, *r)) );
+            }
+
+            let errs = c
+                .check_proof(&p)
+                .unwrap_err()
+                .into_iter();
+
+            if errs
+                .clone()
+                .into_iter()
+                .zip( e.clone() )
+                .any(|(a, e)| a != e) 
+            {
+                panic!("Error mismatch!\nExpected {e:?}\nGot:{errs:?}")
+            }
+        };
+    }
+
     #[test]
     fn reiteration() {
         proof! {
@@ -367,42 +395,124 @@ mod tests {
 
     #[test]
     fn complex_tfl_derived() {
-        
+
     }
 
     #[test]
     fn necessity_intr() {
-
+        proof! {
+            [TFL_BASIC, SYSTEM_K],
+            0, "[]A", "PR",
+            1, "[]", "PR",
+            1, "A", "[]E 1",
+            0, "[]A", "[]I 2-3",
+        }
     }
 
     #[test]
     fn necessity_elim() {
+        proof! {
+            [SYSTEM_K],
+            0, "[]A", "PR",
+            1, "[]", "PR",
+            1, "A", "[]E 1",
+        }
 
+        bad_proof! {
+            [TFL_BASIC, SYSTEM_K],
+            [(4, CheckError::BadUsage)],
+            0, "[]A", "PR",
+            1, "[]", "PR",
+            2, "[]", "PR",
+            2, "A", "[]E 1",
+        }
     }
 
     #[test]
     fn possibility_def() {
+        proof! {
+            [SYSTEM_K],
+            0, "~[]~A", "PR",
+            0, "<>A", "Def<> 1",
+        }
 
+        proof! {
+            [SYSTEM_K],
+            0, "<>A", "PR",
+            0, "~[]~A", "Def<> 1",
+        }
     }
 
     #[test]
     fn modal_conversion() {
+        proof! {
+            [SYSTEM_K],
+            0, "~[]A", "PR",
+            0, "<>~A", "MC 1",
+            0, "~[]A", "MC 2",
+        }
 
+        proof! {
+            [SYSTEM_K],
+            0, "~<>A", "PR",
+            0, "[]~A", "MC 1",
+            0, "~<>A", "MC 2",
+        }
     }
 
     #[test]
     fn rule_t() {
+        proof! {
+            [SYSTEM_T],
+            0, "[]A", "PR",
+            0, "A", "RT 1",
+        }
 
+        bad_proof! {
+            [SYSTEM_T],
+            [(3, CheckError::RelaxedInside)],
+            0, "[]A", "PR",
+            1, "[]", "PR",
+            1, "[]A", "RT 1",
+        }
     }
 
     #[test]
     fn rule_four() {
+        proof! {
+            [SYSTEM_S4],
+            0, "[]A", "PR",
+            1, "[]", "PR",
+            1, "[]A", "R4 1",
+        }
 
+        bad_proof! {
+            [SYSTEM_S4],
+            [(4, CheckError::BadUsage)],
+            0, "[]A", "PR",
+            1, "[]", "PR",
+            2, "[]", "PR",
+            2, "[]A", "R4 1",
+        }
     }
 
     #[test]
     fn rule_five() {
+        proof! {
+            [SYSTEM_S5],
+            0, "~[]A", "PR",
+            1, "[]", "PR",
+            1, "~[]A", "R5 1",
+        }
 
+        bad_proof! {
+            [SYSTEM_S5],
+            [(4, CheckError::BadUsage)],
+            0, "~[]A", "PR",
+            1, "[]", "PR",
+            2, "[]", "PR",
+            2, "~[]A", "R5 1",
+        }
     }
 
     #[test]

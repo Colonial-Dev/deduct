@@ -29,6 +29,24 @@ pub const TFL_DERIVED: &[(&str, &dyn Rule)] = &[
     ("DEM", &DeMorgan),
 ];
 
+pub const SYSTEM_K: &[(&str, &dyn Rule)] = &[
+    ("□I", &NecessityIntr),
+    ("□E", &NecessityElim),
+    ("Def◇", &PossibilityDef),
+    ("MC", &ModalConversion)
+];
+
+pub const SYSTEM_T: &[(&str, &dyn Rule)] = &[
+    ("RT", &RT)
+];
+
+pub const SYSTEM_S4: &[(&str, &dyn Rule)] = &[
+    ("R4", &R4)
+];
+
+pub const SYSTEM_S5: &[(&str, &dyn Rule)] = &[
+    ("R5", &R5)
+];
 // SYSTEM_K
 // - BASIC + DERIVED
 // - Necessity I/E
@@ -50,6 +68,8 @@ pub trait Rule {
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError>;
 
     /// Returns whether or not the rule is only usable in a strict subproof.
+    /// 
+    /// Defaults to `false`.
     fn strict_only(&self) -> bool {
         false
     }
@@ -86,7 +106,7 @@ pub trait Rule {
                 }
             })
         {
-            return Err(CheckError::BadCitation)
+            return Err(CheckError::BadLine)
         }
 
         // Ensure all line ranges are citing a valid, complete subproof.
@@ -201,7 +221,9 @@ pub trait Rule {
 
         if self.strict_only() && !p.strict_zones[line.n as usize - 1] {
             return Err(CheckError::StrictOutside)
-        } else if p.strict_zones[line.n as usize - 1] && !line.is_premise() {
+        }
+        
+        if !self.strict_only() && !line.is_premise() && p.strict_zones[line.n as usize - 1] {
             return Err(CheckError::RelaxedInside)
         }
 
@@ -211,7 +233,9 @@ pub trait Rule {
     }
 }
 
-#[derive(Debug, Error, PartialEq, Eq)]
+// rustc doesn't seem to count uses in default trait method impls?
+#[allow(dead_code)]
+#[derive(Debug, Error, PartialEq, Eq, Clone)]
 pub enum CheckError {
     #[error("cited a rule that does not exist or is badly formed")]
     NoSuchRule,
@@ -222,7 +246,7 @@ pub enum CheckError {
     #[error("cited a rule that was used incorrectly")]
     BadUsage,
     #[error("cited a current or future line, or a line that does not exist")]
-    BadCitation,
+    BadLine,
     #[error("cited a line range that does not correspond to a subproof")]
     BadRange,
     #[error("cited an unavailable line or subproof")]
@@ -238,21 +262,27 @@ pub enum CheckError {
     Many(&'a Sentence, &'a Sentence)
 } */
 
-fn cited_sentence<'a>(p: &'a Proof, l: &Line, n: usize) -> Result<&'a Sentence, CheckError> {
-    let Some(l) = p.line( l.cited_lines()[n].as_one() ) else {
-        return Err(CheckError::BadCitation)
-    };
+fn check_strict_nesting(p: &Proof, s: u16, e: u16) -> Result<(), CheckError> {
+    let mut depth = 0_u16;
+    let mut nest  = 0_u16;
 
-    Ok(&l.s)
-}
+    for n in s..e {
+        let line = p.line(n).unwrap();
 
-fn cited_subproof<'a>(p: &'a Proof, l: &Line, n: usize) -> Result<(&'a Sentence, &'a Sentence), CheckError> {
-    let range = l.cited_lines()[n].as_many();
+        if line.s.is_nec_signal() {
+            nest += 1;
+        } else if line.d < depth {
+            nest = nest.saturating_sub(1);
+        }
 
-    Ok((
-        &p.line( *range.start() ).unwrap().s,
-        &p.line( *range.end() ).unwrap().s
-    ))
+        depth = line.d;
+    }
+
+    if nest > 1 {
+        return Err(CheckError::BadUsage)
+    }
+
+    Ok(())
 }
 
 pub struct Premise;
@@ -293,8 +323,8 @@ impl Rule for ConjunctionIntr {
     }
 
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
-        let s_a = cited_sentence(p, l, 0)?;
-        let s_b = cited_sentence(p, l, 1)?;
+        let s_a = l.cited_sentence(p, 0);
+        let s_b = l.cited_sentence(p, 1);
 
         let Sentence::Con(lhs, rhs) = &l.s else {
             return Err(CheckError::BadUsage)
@@ -316,7 +346,7 @@ impl Rule for ConjunctionElim {
     }
 
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
-        let source = cited_sentence(p, l, 0)?;
+        let source = l.cited_sentence(p, 0);
 
         let Sentence::Con(lhs, rhs) = source else {
             return Err(CheckError::BadUsage)
@@ -338,7 +368,7 @@ impl Rule for DisjunctionIntr {
     }
 
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
-        let source = cited_sentence(p, l, 0)?;
+        let source = l.cited_sentence(p, 0);
 
         let Sentence::Dis(lhs, rhs) = &l.s else {
             return Err(CheckError::BadUsage)
@@ -360,14 +390,14 @@ impl Rule for DisjunctionElim {
     }
 
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
-        let source = cited_sentence(p, l, 0)?;
+        let source = l.cited_sentence(p, 0);
 
         let Sentence::Dis(lhs, rhs) = source else {
             return Err(CheckError::BadUsage)
         };
 
-        let (p_1, c_1) = cited_subproof(p, l, 1)?;
-        let (p_2, c_2) = cited_subproof(p, l, 2)?;
+        let (p_1, c_1) = l.cited_subproof(p, 1);
+        let (p_2, c_2) = l.cited_subproof(p, 2);
 
         if (*c_1 != l.s) || (*c_2 != l.s) {
             return Err(CheckError::BadUsage)
@@ -389,7 +419,7 @@ impl Rule for ConditionalIntr {
     }
 
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
-        let (p, c) = cited_subproof(p, l, 0)?;
+        let (p, c) = l.cited_subproof(p, 0);
 
         let Sentence::Imp(lhs, rhs) = &l.s else {
             return Err(CheckError::BadUsage)
@@ -411,8 +441,8 @@ impl Rule for ConditionalElim {
     }
 
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
-        let s_1 = cited_sentence(p, l, 0)?;
-        let s_2 = cited_sentence(p, l, 1)?;
+        let s_1 = l.cited_sentence(p, 0);
+        let s_2 = l.cited_sentence(p, 1);
         
         if let Sentence::Imp(lhs, rhs) = s_1 {
             if lhs == s_2 && rhs == l.s {
@@ -438,8 +468,8 @@ impl Rule for BiconditionalIntr {
     }
     
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
-        let (p_1, c_1) = cited_subproof(p, l, 0)?;
-        let (p_2, c_2) = cited_subproof(p, l, 1)?;
+        let (p_1, c_1) = l.cited_subproof(p, 0);
+        let (p_2, c_2) = l.cited_subproof(p, 1);
 
         let Sentence::Bic(lhs, rhs) = &l.s else {
             return Err(CheckError::BadUsage)
@@ -465,8 +495,8 @@ impl Rule for BiconditionalElim {
     }
 
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
-        let s_1 = cited_sentence(p, l, 0)?;
-        let s_2 = cited_sentence(p, l, 1)?;
+        let s_1 = l.cited_sentence(p, 0);
+        let s_2 = l.cited_sentence(p, 1);
 
         let Sentence::Bic(lhs, rhs) = s_1 else {
             return Err(CheckError::BadUsage)
@@ -488,7 +518,7 @@ impl Rule for NegationIntr {
     }
 
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
-        let (p, c) = cited_subproof(p, l, 0)?;
+        let (p, c) = l.cited_subproof(p, 0);
 
         if !c.is_bot_signal() {
             return Err(CheckError::BadUsage)
@@ -512,8 +542,8 @@ impl Rule for NegationElim {
     }
 
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
-        let s_1 = cited_sentence(p, l, 0)?;
-        let s_2 = cited_sentence(p, l, 1)?;
+        let s_1 = l.cited_sentence(p, 0);
+        let s_2 = l.cited_sentence(p, 1);
 
         if !l.s.is_bot_signal() {
             return Err(CheckError::BadUsage)
@@ -547,7 +577,7 @@ impl Rule for Explosion {
     }
     
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
-        let source = cited_sentence(p, l, 0)?;
+        let source = l.cited_sentence(p, 0);
 
         if !source.is_bot_signal() {
             return Err(CheckError::BadUsage)
@@ -565,7 +595,7 @@ impl Rule for IndirectProof {
     }
 
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
-        let (p, c) = cited_subproof(p, l, 0)?;
+        let (p, c) = l.cited_subproof(p, 0);
 
         let Sentence::Neg(p) = p else {
             return Err(CheckError::BadUsage)
@@ -591,8 +621,8 @@ impl Rule for DisjunctiveSyllogism {
     }
 
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
-        let s_1 = cited_sentence(p, l, 0)?;
-        let s_2 = cited_sentence(p, l, 1)?;
+        let s_1 = l.cited_sentence(p, 0);
+        let s_2 = l.cited_sentence(p, 1);
 
         if let Sentence::Dis(lhs, rhs) = s_1 {
             let Sentence::Neg(s_2) = s_2 else {
@@ -626,8 +656,8 @@ impl Rule for ModusTollens {
     }
 
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
-        let s_1 = cited_sentence(p, l, 0)?;
-        let s_2 = cited_sentence(p, l, 1)?;
+        let s_1 = l.cited_sentence(p, 0);
+        let s_2 = l.cited_sentence(p, 1);
 
         let Sentence::Neg(s) = &l.s else {
             return Err(CheckError::BadUsage)
@@ -665,7 +695,7 @@ impl Rule for Dne {
     }
 
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
-        let s = cited_sentence(p, l, 0)?;
+        let s = l.cited_sentence(p, 0);
         
         let Sentence::Neg(s) = s else {
             return Err(CheckError::BadUsage)
@@ -691,8 +721,8 @@ impl Rule for Lem {
     }
     
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
-        let (p_1, c_1) = cited_subproof(p, l, 0)?;
-        let (p_2, c_2) = cited_subproof(p, l, 1)?;
+        let (p_1, c_1) = l.cited_subproof(p, 0);
+        let (p_2, c_2) = l.cited_subproof(p, 1);
 
         if c_1 != c_2 {
             return Err(CheckError::BadUsage)
@@ -719,7 +749,7 @@ impl Rule for DeMorgan {
 
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
         // this is... something
-        match cited_sentence(p, l, 0)? {
+        match l.cited_sentence(p, 0) {
             Sentence::Neg(inner) => {
                 match &**inner {
                     Sentence::Con(lhs, rhs) => {
@@ -794,11 +824,20 @@ impl Rule for NecessityElim {
     }
 
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
+        let n = l.cited_lines()[0].as_one();
         let s = l.cited_sentence(p, 0);
 
+        let Sentence::Nec(s) = s else {
+            return Err(CheckError::BadUsage)
+        };
 
+        check_strict_nesting(p, n, l.n)?;
 
-        todo!()
+        if s == l.s {
+            return Ok(())
+        }
+
+        Err(CheckError::BadUsage)
     }
 }
 
@@ -809,9 +848,46 @@ impl Rule for PossibilityDef {
         &[LineNumberType::One]
     }
 
-    fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
-        let s = cited_sentence(p, l, 0)?;
-        todo!()
+    fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {        
+        match l.cited_sentence(p, 0) {
+            Sentence::Pos(inner) => {
+                let Sentence::Neg(s) = &l.s else {
+                    return Err(CheckError::BadUsage)
+                };
+
+                let Sentence::Nec(s) = &**s else {
+                    return Err(CheckError::BadUsage)
+                };
+
+                let Sentence::Neg(s) = &**s else {
+                    return Err(CheckError::BadUsage)
+                };
+
+                if inner == s {
+                    return Ok(())
+                }
+            },
+            Sentence::Neg(inner) => {
+                let Sentence::Nec(inner) = &**inner else {
+                    return Err(CheckError::BadUsage)
+                };
+
+                let Sentence::Neg(inner) = &**inner else {
+                    return Err(CheckError::BadUsage)
+                };
+
+                let Sentence::Pos(s) = &l.s else {
+                    return Err(CheckError::BadUsage)
+                };
+
+                if inner == s {
+                    return Ok(())
+                }
+            }
+            _ => ()
+        }
+
+        Err(CheckError::BadUsage)
     }
 }
 
@@ -823,7 +899,77 @@ impl Rule for ModalConversion {
     }
 
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
-        todo!()
+        // love too pattern match
+        match l.cited_sentence(p, 0) {
+            Sentence::Neg(inner) => {
+                match &**inner {
+                    Sentence::Nec(inner) => {
+                        let Sentence::Pos(s) = &l.s else {
+                            return Err(CheckError::BadUsage)
+                        };
+
+                        let Sentence::Neg(s) = &**s else {
+                            return Err(CheckError::BadUsage)
+                        };
+
+                        if inner == s {
+                            return Ok(())
+                        }
+                    },
+                    Sentence::Pos(inner) => {
+                        let Sentence::Nec(s) = &l.s else {
+                            return Err(CheckError::BadUsage)
+                        };
+
+                        let Sentence::Neg(s) = &**s else {
+                            return Err(CheckError::BadUsage)
+                        };
+
+                        if inner == s {
+                            return Ok(())
+                        }
+                    },
+                    _ => ()
+                }
+            },
+            Sentence::Pos(inner) => {
+                let Sentence::Neg(inner) = &**inner else {
+                    return Err(CheckError::BadUsage)
+                };
+
+                let Sentence::Neg(s) = &l.s else {
+                    return Err(CheckError::BadUsage)
+                };
+
+                let Sentence::Nec(s) = &**s else {
+                    return Err(CheckError::BadUsage)
+                };
+
+                if inner == s {
+                    return Ok(())
+                }
+            },
+            Sentence::Nec(inner) => {
+                let Sentence::Neg(inner) = &**inner else {
+                    return Err(CheckError::BadUsage)
+                };
+
+                let Sentence::Neg(s) = &l.s else {
+                    return Err(CheckError::BadUsage)
+                };
+
+                let Sentence::Pos(s) = &**s else {
+                    return Err(CheckError::BadUsage)
+                };
+                
+                if inner == s {
+                    return Ok(())
+                }
+            }
+            _ => ()
+        }
+        
+        Err(CheckError::BadUsage)
     }
 }
 
@@ -835,7 +981,17 @@ impl Rule for RT {
     }
 
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
-        todo!()
+        let s = l.cited_sentence(p, 0);
+
+        let Sentence::Nec(s) = s else {
+            return Err(CheckError::BadUsage)
+        };
+
+        if s == l.s {
+            return Ok(())
+        }
+        
+        Err(CheckError::BadUsage)
     }
 }
 
@@ -851,7 +1007,16 @@ impl Rule for R4 {
     }
 
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
-        todo!()
+        let n = l.cited_lines()[0].as_one();
+        let s = l.cited_sentence(p, 0);
+
+        check_strict_nesting(p, n, l.n)?;
+
+        if s == &l.s {
+            return Ok(())
+        }
+
+        Err(CheckError::BadUsage)
     }
 }
 
@@ -867,6 +1032,24 @@ impl Rule for R5 {
     }
 
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
-        todo!()
+        let n = l.cited_lines()[0].as_one();
+        let s = l.cited_sentence(p, 0);
+        
+        let Sentence::Neg(s_inner) = s else {
+            return Err(CheckError::BadUsage)
+        };
+
+        let Sentence::Nec(_) = &**s_inner else {
+            dbg!();
+            return Err(CheckError::BadUsage)
+        };
+
+        check_strict_nesting(p, n, l.n)?;
+
+        if s == &l.s {
+            return Ok(())
+        }
+
+        Err(CheckError::BadUsage)
     }
 }
