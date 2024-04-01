@@ -26,3 +26,10 @@ path = "fuzz_targets/citation_parser.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "checker"
+path = "fuzz_targets/checker.rs"
+test = false
+doc = false
+bench = false

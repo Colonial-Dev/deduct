@@ -2,66 +2,7 @@ use thiserror::Error;
 
 use crate::parse::*;
 
-pub type CheckErrors = Vec<(u16, CheckError)>;
-
-pub const TFL_BASIC: &[(&str, &dyn Rule)] = &[
-    ("R", &Reiteration),
-    ("∧I", &ConjunctionIntr),
-    ("∧E", &ConjunctionElim),
-    ("∨I", &DisjunctionIntr),
-    ("∨E", &DisjunctionElim),
-    ("→I", &ConditionalIntr),
-    ("→E", &ConditionalElim),
-    ("↔I", &BiconditionalIntr),
-    ("↔E", &BiconditionalElim),
-    ("¬I", &NegationIntr),
-    ("¬E", &NegationElim),
-    ("IP", &IndirectProof),
-    ("X", &Explosion),
-];
-
-pub const TFL_DERIVED: &[(&str, &dyn Rule)] = &[
-    ("DS", &DisjunctiveSyllogism),
-    ("MT", &ModusTollens),
-    ("DNE", &Dne),
-    ("LEM", &Lem),
-    ("DeM", &DeMorgan),
-    ("DEM", &DeMorgan),
-];
-
-pub const SYSTEM_K: &[(&str, &dyn Rule)] = &[
-    ("□I", &NecessityIntr),
-    ("□E", &NecessityElim),
-    ("Def◇", &PossibilityDef),
-    ("MC", &ModalConversion)
-];
-
-pub const SYSTEM_T: &[(&str, &dyn Rule)] = &[
-    ("RT", &RT)
-];
-
-pub const SYSTEM_S4: &[(&str, &dyn Rule)] = &[
-    ("R4", &R4)
-];
-
-pub const SYSTEM_S5: &[(&str, &dyn Rule)] = &[
-    ("R5", &R5)
-];
-// SYSTEM_K
-// - BASIC + DERIVED
-// - Necessity I/E
-// - Possibility definition
-// - Modal conversion
-// SYSTEM_T
-// - SYSTEM_K +
-// - RT
-// SYSTEM_S4
-// - SYSTEM_T +
-// - R4
-// SYSTEM_S5
-// - SYSTEM_S4 +
-// - R5
-pub trait Rule {
+pub trait Rule : Sync {
     /// Returns the order and type of lines uses of this rule should cite.
     fn line_ord(&self) -> &[LineNumberType];
     /// Verifies that the rule cited is used correctly.
@@ -297,7 +238,7 @@ impl Rule for Premise {
     }
 }
 
-struct Reiteration;
+pub struct Reiteration;
 
 impl Rule for Reiteration {
     fn line_ord(&self) -> &[LineNumberType] {
@@ -315,7 +256,7 @@ impl Rule for Reiteration {
     }
 }
 
-struct ConjunctionIntr;
+pub struct ConjunctionIntr;
 
 impl Rule for ConjunctionIntr {
     fn line_ord(&self) -> &[LineNumberType] {
@@ -338,7 +279,7 @@ impl Rule for ConjunctionIntr {
     }
 }
 
-struct ConjunctionElim;
+pub struct ConjunctionElim;
 
 impl Rule for ConjunctionElim {
     fn line_ord(&self) -> &[LineNumberType] {
@@ -360,7 +301,7 @@ impl Rule for ConjunctionElim {
     }
 }
 
-struct DisjunctionIntr;
+pub struct DisjunctionIntr;
 
 impl Rule for DisjunctionIntr {
     fn line_ord(&self) -> &[LineNumberType] {
@@ -382,7 +323,7 @@ impl Rule for DisjunctionIntr {
     }
 }
 
-struct DisjunctionElim;
+pub struct DisjunctionElim;
 
 impl Rule for DisjunctionElim {
     fn line_ord(&self) -> &[LineNumberType] {
@@ -411,7 +352,7 @@ impl Rule for DisjunctionElim {
     }
 }
 
-struct ConditionalIntr;
+pub struct ConditionalIntr;
 
 impl Rule for ConditionalIntr {
     fn line_ord(&self) -> &[LineNumberType] {
@@ -433,7 +374,7 @@ impl Rule for ConditionalIntr {
     }
 }
 
-struct ConditionalElim;
+pub struct ConditionalElim;
 
 impl Rule for ConditionalElim {
     fn line_ord(&self) -> &[LineNumberType] {
@@ -460,7 +401,7 @@ impl Rule for ConditionalElim {
     }
 }
 
-struct BiconditionalIntr;
+pub struct BiconditionalIntr;
 
 impl Rule for BiconditionalIntr {
     fn line_ord(&self) -> &[LineNumberType] {
@@ -487,7 +428,7 @@ impl Rule for BiconditionalIntr {
     }
 }
 
-struct BiconditionalElim;
+pub struct BiconditionalElim;
 
 impl Rule for BiconditionalElim {
     fn line_ord(&self) -> &[LineNumberType] {
@@ -510,7 +451,7 @@ impl Rule for BiconditionalElim {
     }
 }
 
-struct NegationIntr;
+pub struct NegationIntr;
 
 impl Rule for NegationIntr {
     fn line_ord(&self) -> &[LineNumberType] {
@@ -534,7 +475,7 @@ impl Rule for NegationIntr {
     }
 }
 
-struct NegationElim;
+pub struct NegationElim;
 
 impl Rule for NegationElim {
     fn line_ord(&self) -> &[LineNumberType] {
@@ -569,7 +510,7 @@ impl Rule for NegationElim {
     }
 }
 
-struct Explosion;
+pub struct Explosion;
 
 impl Rule for Explosion {
     fn line_ord(&self) -> &[LineNumberType] {
@@ -587,7 +528,7 @@ impl Rule for Explosion {
     }
 }
 
-struct IndirectProof;
+pub struct IndirectProof;
 
 impl Rule for IndirectProof {
     fn line_ord(&self) -> &[LineNumberType] {
@@ -613,7 +554,7 @@ impl Rule for IndirectProof {
     }
 }
 
-struct DisjunctiveSyllogism;
+pub struct DisjunctiveSyllogism;
 
 impl Rule for DisjunctiveSyllogism {
     fn line_ord(&self) -> &[LineNumberType] {
@@ -648,7 +589,7 @@ impl Rule for DisjunctiveSyllogism {
     }
 }
 
-struct ModusTollens;
+pub struct ModusTollens;
 
 impl Rule for ModusTollens {
     fn line_ord(&self) -> &[LineNumberType] {
@@ -687,7 +628,7 @@ impl Rule for ModusTollens {
     }
 }
 
-struct Dne;
+pub struct Dne;
 
 impl Rule for Dne {
     fn line_ord(&self) -> &[LineNumberType] {
@@ -713,7 +654,7 @@ impl Rule for Dne {
     }
 }
 
-struct Lem;
+pub struct Lem;
 
 impl Rule for Lem {
     fn line_ord(&self) -> &[LineNumberType] {
@@ -740,7 +681,7 @@ impl Rule for Lem {
     }
 }
 
-struct DeMorgan;
+pub struct DeMorgan;
 
 impl Rule for DeMorgan {
     fn line_ord(&self) -> &[LineNumberType] {
@@ -786,7 +727,7 @@ impl Rule for DeMorgan {
     }
 }
 
-struct NecessityIntr;
+pub struct NecessityIntr;
 
 impl Rule for NecessityIntr {
     fn line_ord(&self) -> &[LineNumberType] {
@@ -812,7 +753,7 @@ impl Rule for NecessityIntr {
     }
 }
 
-struct NecessityElim;
+pub struct NecessityElim;
 
 impl Rule for NecessityElim {
     fn line_ord(&self) -> &[LineNumberType] {
@@ -841,7 +782,7 @@ impl Rule for NecessityElim {
     }
 }
 
-struct PossibilityDef;
+pub struct PossibilityDef;
 
 impl Rule for PossibilityDef {
     fn line_ord(&self) -> &[LineNumberType] {
@@ -891,7 +832,7 @@ impl Rule for PossibilityDef {
     }
 }
 
-struct ModalConversion;
+pub struct ModalConversion;
 
 impl Rule for ModalConversion {
     fn line_ord(&self) -> &[LineNumberType] {
@@ -973,7 +914,7 @@ impl Rule for ModalConversion {
     }
 }
 
-struct RT;
+pub struct RT;
 
 impl Rule for RT {
     fn line_ord(&self) -> &[LineNumberType] {
@@ -995,7 +936,7 @@ impl Rule for RT {
     }
 }
 
-struct R4;
+pub struct R4;
 
 impl Rule for R4 {
     fn line_ord(&self) -> &[LineNumberType] {
@@ -1020,7 +961,7 @@ impl Rule for R4 {
     }
 }
 
-struct R5;
+pub struct R5;
 
 impl Rule for R5 {
     fn line_ord(&self) -> &[LineNumberType] {

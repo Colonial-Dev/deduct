@@ -1,16 +1,19 @@
+pub mod rulesets;
 mod rules;
 
 use std::collections::HashMap;
 
 use crate::parse::*;
+use crate::check::rules::*;
 
-use self::rules::*;
+pub type CheckErrors = Vec<(u16, CheckError)>;
 
 pub struct Checker {
     rules: HashMap<&'static str, &'static dyn Rule>
 }
 
 impl Checker {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         let rules = HashMap::from(
             [("PR", &Premise as &dyn Rule), ("?", &Premise as &dyn Rule)]
@@ -18,10 +21,14 @@ impl Checker {
 
         Self { rules }
     }
+    
+    pub fn add_ruleset(&mut self, ruleset: &[(&'static str, &'static dyn Rule)]) {
+        self.rules.extend( ruleset.iter().map(|(i, r)| (*i, *r)) );
+    }
 
     pub fn check_proof(&self, p: &Proof) -> Result<(), CheckErrors> {
         let mut errors = Vec::new();
-
+        
         for line in &p.lines {
             let Some(rule) = self.rules.get( line.c.r.as_str() ) else {
                 errors.push( (line.n, CheckError::NoSuchRule) );
@@ -44,6 +51,7 @@ impl Checker {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::rulesets::*;
 
     macro_rules! proof {
         ([$($rules:ident),+ $(,)?], $($n:literal, $s:literal, $c:literal,)+) => {
