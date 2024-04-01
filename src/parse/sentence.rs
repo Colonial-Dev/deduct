@@ -168,6 +168,8 @@ impl Sentence {
 
 impl PartialEq<&Box<Sentence>> for Sentence {
     fn eq(&self, other: &&Box<Sentence>) -> bool {
+        // *gasps in mock horror* i've become a triple star programmer
+        // (the compiler can probably optimize this... i think)
         *self == ***other
     }
 }

@@ -52,9 +52,14 @@ pub trait Rule {
     /// Verifies that the rule cited is used correctly.
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError>;
 
+    /// Returns whether or not the rule is only usable in a strict subproof.
+    fn strict_only(&self) -> bool {
+        false
+    }
+
     /// Validate the use of this rule in justifying the provided line.
-    fn validate(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
-        if self.line_ord().len() != l.cited_lines().len() {
+    fn validate(&self, p: &Proof, line: &Line) -> Result<(), CheckError> {
+        if self.line_ord().len() != line.cited_lines().len() {
             return Err(CheckError::BadLineCount)
         }
 
@@ -62,7 +67,7 @@ pub trait Rule {
         if self
             .line_ord()
             .iter()
-            .zip( l.cited_lines() )
+            .zip( line.cited_lines() )
             .any(|(e, a)| e != a) 
         {
             return Err(CheckError::BadLineType)
@@ -70,17 +75,17 @@ pub trait Rule {
 
         // Ensure we are not citing ourselves or the future.
         // This also captures lines that do not exist.
-        if l
+        if line
             .cited_lines()
             .iter()
             .any(|ln| match ln {
                 // Single line citations must be at least one,
                 // and cannot refer to current or future lines.
-                LineNumber::One(n) => *n >= l.n || *n < 1,
+                LineNumber::One(n) => *n >= line.n || *n < 1,
                 // The start of a line range must be at least 1, and the end must be at least 2.
                 // The end of the line range must not be a current or future line.
                 LineNumber::Many(r) => {
-                    *r.start() < 1 || *r.end() < 2 || *r.end() >= l.n
+                    *r.start() < 1 || *r.end() < 2 || *r.end() >= line.n
                 }
             })
         {
@@ -88,7 +93,7 @@ pub trait Rule {
         }
 
         // Ensure all line ranges are citing a valid, complete subproof.
-        if l
+        if line
             .cited_lines()
             .iter()
             .filter_map(|ln| match ln {
@@ -107,7 +112,7 @@ pub trait Rule {
                 // If the start or end depths are zero, then this can't be a subproof.
                 // If the start and end have different depths, then the range is oversized.
                 // If the end is greater than or equal to the current line, then the subproof has not been closed.
-                if (sd < 1 || ed < 1) || (sd != ed) || (sd >= l.n) {
+                if (sd < 1 || ed < 1) || (sd != ed) || (sd >= line.n) {
                     return true;
                 }
                 
@@ -134,57 +139,94 @@ pub trait Rule {
             return Err(CheckError::BadRange)
         }
 
-        // Accessibility index for the line being validated.
-        let mut access_idx = vec![false; p.len()];
+        // Accessibility indices for the line being validated.
+        let mut sentence_access = vec![false; p.len()];
+        let mut subproof_access = vec![false; p.len()];
 
         // Precompute accessibility relative to all previous lines in the proof.
-        // (Future lines are by definition inaccessible.)
+        // (Present and future lines are by definition inaccessible.)
         //
         // The ceiling value is initialized to the depth of the current line.
-        let mut ceil = l.d;
+        let mut ceil = line.d;
 
+        // Single sentence accessibility.
         // Step backwards through the proof from the current line.
-        for n in (l.n..=1).rev() {
+        for n in (1..line.n).rev() {
             let d = p.line(n).map(|l| l.d).unwrap();
 
             #[allow(clippy::comparison_chain)]
             // If the line's depth is equal to the ceiling value, it is reachable.
             if d == ceil {
-                access_idx[n as usize - 1] = true;
+                sentence_access[n as usize - 1] = true;
             }
             // If the line is shallower than the ceiling value, it is reachable,
             // but the ceiling is lowered to match.
             else if d < ceil {
-                access_idx[n as usize - 1] = true;
+                sentence_access[n as usize - 1] = true;
                 ceil -= 1;
-            } 
-            // If the line is greater than the ceiling value, it is not reachable.
-            else {
-                access_idx[n as usize - 1] = false;
+            }
+        }
+
+        let mut ceil = line.d;
+
+        // Subproof accessibility.
+        // Similar to above algorithm
+        for n in (1..line.n).rev() {
+            let l = p.line(n).unwrap();
+
+            // If the line is a premise one level deeper than the current ceiling,
+            // then the subproof is reachable.
+            if l.d == (ceil + 1) && l.is_premise() {
+                subproof_access[n as usize - 1] = true;
+            }
+            // If the line is shallower than the ceiling value - i.e. we've left a subproof -
+            // then the ceiling is lowered to match.
+            else if l.d < ceil {
+                ceil -= 1;
             }
         }
 
         // Ensure that no unavailable lines or subproofs are being cited.
-        if l
+        if line
             .cited_lines()
             .iter()
             .any(|ln| match ln {
                 LineNumber::One(n) => {
-                    access_idx[*n as usize - 1]
+                    !sentence_access[*n as usize - 1]
                 }
                 LineNumber::Many(r) => {
                     // We only need to check the start depth,
                     // as subproof range validity was checked in the previous scan.
-                    access_idx[*r.start() as usize - 1]
+                    !subproof_access[*r.start() as usize - 1]
                 }
             })
         {
             return Err(CheckError::Unavailable)
         }
 
-        // TODO add strict subproof adherence check
+        // Ensure strict-subproof-only rules are actually in a strict subproof
+        if self.strict_only() {
+            let mut ok = false;
 
-        self.is_right(p, l)?;
+            for n in (1..line.n).rev() {
+                let ln = p.line(n).unwrap();
+
+                if ln.d < line.d {
+                    return Err(CheckError::BadStrict)
+                }
+
+                if let Sentence::Signal(NEC) = ln.s {
+                    ok = true;
+                    break;
+                }
+            }
+
+            if !ok {
+                return Err(CheckError::BadStrict)
+            }
+        }
+
+        self.is_right(p, line)?;
 
         Ok(())
     }
@@ -206,6 +248,8 @@ pub enum CheckError {
     BadRange,
     #[error("cited an unavailable line or subproof")]
     Unavailable,
+    #[error("used a strict-subproof-only rule outside of a strict subproof")]
+    BadStrict,
 }
 
 /* enum Citations<'a> {
@@ -250,7 +294,7 @@ impl Rule for Reiteration {
     }
 
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {        
-        let source = cited_sentence(p, l, 0)?;
+        let source = l.cited_sentence(p, 0);
 
         if source != &l.s {
             return Err(CheckError::BadUsage)
@@ -739,7 +783,7 @@ impl Rule for NecessityIntr {
     }
 
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
-        let (p, c) = cited_subproof(p, l, 0)?;
+        let (p, c) = l.cited_subproof(p, 0);
 
         let Sentence::Signal(NEC) = p else {
             return Err(CheckError::BadUsage)
@@ -759,12 +803,89 @@ impl Rule for NecessityIntr {
 
 struct NecessityElim;
 
+impl Rule for NecessityElim {
+    fn line_ord(&self) -> &[LineNumberType] {
+        &[LineNumberType::One]
+    }
+
+    fn strict_only(&self) -> bool {
+        true
+    }
+
+    fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
+        let s = l.cited_sentence(p, 0);
+
+        
+
+        todo!()
+    }
+}
+
 struct PossibilityDef;
+
+impl Rule for PossibilityDef {
+    fn line_ord(&self) -> &[LineNumberType] {
+        &[LineNumberType::One]
+    }
+
+    fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
+        let s = cited_sentence(p, l, 0)?;
+        todo!()
+    }
+}
 
 struct ModalConversion;
 
+impl Rule for ModalConversion {
+    fn line_ord(&self) -> &[LineNumberType] {
+        &[LineNumberType::One]
+    }
+
+    fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
+        todo!()
+    }
+}
+
 struct RT;
+
+impl Rule for RT {
+    fn line_ord(&self) -> &[LineNumberType] {
+        &[LineNumberType::One]
+    }
+
+    fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
+        todo!()
+    }
+}
 
 struct R4;
 
+impl Rule for R4 {
+    fn line_ord(&self) -> &[LineNumberType] {
+        &[LineNumberType::One]
+    }
+
+    fn strict_only(&self) -> bool {
+        true
+    }
+
+    fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
+        todo!()
+    }
+}
+
 struct R5;
+
+impl Rule for R5 {
+    fn line_ord(&self) -> &[LineNumberType] {
+        &[LineNumberType::One]
+    }
+
+    fn strict_only(&self) -> bool {
+        true
+    }
+
+    fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
+        todo!()
+    }
+}

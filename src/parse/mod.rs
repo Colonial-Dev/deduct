@@ -68,6 +68,19 @@ impl Line {
     pub fn is_premise(&self) -> bool {
         self.c.r == "PR"
     }
+
+    pub fn cited_sentence<'p>(&self, p: &'p Proof, n: usize) -> &'p Sentence {
+        &p.line( self.cited_lines()[n].as_one() ).unwrap().s
+    }
+
+    pub fn cited_subproof<'p>(&self, p: &'p Proof, n: usize) -> (&'p Sentence, &'p Sentence) {
+        let range = self.cited_lines()[n].as_many();
+
+        (
+            &p.line( *range.start() ).unwrap().s,
+            &p.line( *range.end() ).unwrap().s
+        )
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
