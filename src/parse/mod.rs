@@ -7,7 +7,7 @@ use thiserror::Error;
 mod citation;
 mod sentence;
 
-pub mod consts {
+mod consts {
     pub const NEG: &str = "¬";
     pub const CON: &str = "∧";
     pub const DIS: &str = "∨";
@@ -40,6 +40,8 @@ pub enum ParseError {
     BadUnary,
     #[error("misuse of contradiction symbol internally in sentence")]
     BadContradiction,
+    #[error("misuse of necessity symbol in a non-premise context")]
+    BadNecessity,
     #[error("empty citation")]
     EmptyCitation,
     #[error("citation does not cite a rule")]
@@ -85,6 +87,7 @@ impl Line {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Proof {
+    pub strict_zones: Vec<bool>,
     pub lines: Vec<Line>,
 }
 
@@ -109,15 +112,23 @@ impl Proof {
             let c = Citation::parse(citation);
 
             if s.is_ok() && c.is_ok() {
-                // Can't do multiple if lets in one line (yet)
-                #[allow(clippy::unnecessary_unwrap)]
+                let s = s.unwrap();
+                let c = c.unwrap();
+
+                // Ensure necessity signal is only used in a premise context.
+                if s.is_nec_signal() && c.r != "PR" {
+                    error.push( (i as u16, ParseError::BadNecessity) );
+                    continue;
+                }
+
                 lines.push(Line {
-                    s: s.unwrap(),
-                    c: c.unwrap(),
+                    s,
+                    c,
                     n: i as u16,
                     d: *depth,
                 })
-            } else {
+            }
+            else {
                 if let Err(e) = s {
                     error.push( (i as u16, e) )
                 };
@@ -132,7 +143,25 @@ impl Proof {
             return Err(error);
         }
 
-        Ok(Self { lines })
+        let mut depth = 0_u16;
+        let mut nest  = 0_u16;
+        let mut zones   = vec![false; lines.len()];
+
+        for (n, line) in lines.iter().enumerate() {
+            if line.s.is_nec_signal() {
+                nest += 1;
+            } else if line.d < depth {
+                nest = nest.saturating_sub(1);
+            }
+
+            if nest > 0 {
+                zones[n] = true;
+            }
+
+            depth = line.d;
+        }
+
+        Ok(Self { lines, strict_zones: zones })
     }
     
     #[allow(clippy::len_without_is_empty)]

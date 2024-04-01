@@ -2,9 +2,6 @@ use thiserror::Error;
 
 use crate::parse::*;
 
-const BOT: char = '⊥';
-const NEC: char = '□';
-
 pub type CheckErrors = Vec<(u16, CheckError)>;
 
 pub const TFL_BASIC: &[(&str, &dyn Rule)] = &[
@@ -195,8 +192,6 @@ pub trait Rule {
                     !sentence_access[*n as usize - 1]
                 }
                 LineNumber::Many(r) => {
-                    // We only need to check the start depth,
-                    // as subproof range validity was checked in the previous scan.
                     !subproof_access[*r.start() as usize - 1]
                 }
             })
@@ -204,26 +199,10 @@ pub trait Rule {
             return Err(CheckError::Unavailable)
         }
 
-        // Ensure strict-subproof-only rules are actually in a strict subproof
-        if self.strict_only() {
-            let mut ok = false;
-
-            for n in (1..line.n).rev() {
-                let ln = p.line(n).unwrap();
-
-                if ln.d < line.d {
-                    return Err(CheckError::BadStrict)
-                }
-
-                if let Sentence::Signal(NEC) = ln.s {
-                    ok = true;
-                    break;
-                }
-            }
-
-            if !ok {
-                return Err(CheckError::BadStrict)
-            }
+        if self.strict_only() && !p.strict_zones[line.n as usize - 1] {
+            return Err(CheckError::StrictOutside)
+        } else if p.strict_zones[line.n as usize - 1] && !line.is_premise() {
+            return Err(CheckError::RelaxedInside)
         }
 
         self.is_right(p, line)?;
@@ -249,7 +228,9 @@ pub enum CheckError {
     #[error("cited an unavailable line or subproof")]
     Unavailable,
     #[error("used a strict-subproof-only rule outside of a strict subproof")]
-    BadStrict,
+    StrictOutside,
+    #[error("used a disallowed rule inside of a strict subproof")]
+    RelaxedInside,
 }
 
 /* enum Citations<'a> {
@@ -509,7 +490,7 @@ impl Rule for NegationIntr {
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
         let (p, c) = cited_subproof(p, l, 0)?;
 
-        let Sentence::Signal(BOT) = c else {
+        if !c.is_bot_signal() {
             return Err(CheckError::BadUsage)
         };
 
@@ -534,7 +515,7 @@ impl Rule for NegationElim {
         let s_1 = cited_sentence(p, l, 0)?;
         let s_2 = cited_sentence(p, l, 1)?;
 
-        let Sentence::Signal(BOT) = &l.s else {
+        if !l.s.is_bot_signal() {
             return Err(CheckError::BadUsage)
         };
 
@@ -568,7 +549,7 @@ impl Rule for Explosion {
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
         let source = cited_sentence(p, l, 0)?;
 
-        let Sentence::Signal(BOT) = source else {
+        if !source.is_bot_signal() {
             return Err(CheckError::BadUsage)
         };
 
@@ -590,7 +571,7 @@ impl Rule for IndirectProof {
             return Err(CheckError::BadUsage)
         };
 
-        let Sentence::Signal(BOT) = c else {
+        if !c.is_bot_signal() {
             return Err(CheckError::BadUsage)
         };
 
@@ -785,7 +766,7 @@ impl Rule for NecessityIntr {
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
         let (p, c) = l.cited_subproof(p, 0);
 
-        let Sentence::Signal(NEC) = p else {
+        if !p.is_nec_signal() {
             return Err(CheckError::BadUsage)
         };
 
@@ -815,7 +796,7 @@ impl Rule for NecessityElim {
     fn is_right(&self, p: &Proof, l: &Line) -> Result<(), CheckError> {
         let s = l.cited_sentence(p, 0);
 
-        
+
 
         todo!()
     }

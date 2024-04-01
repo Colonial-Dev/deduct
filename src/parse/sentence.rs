@@ -78,7 +78,7 @@ impl Sentence {
         if SIGNAL_REGEX.is_match(&i) {
             let c = i.chars()
                 .nth(0)
-                .expect("Signal regular expection matched an empty string");
+                .expect("Signal regular expression matched an empty string");
 
             return Ok( Self::Signal(c) )
         }
@@ -91,7 +91,7 @@ impl Sentence {
         if ATOMIC_REGEX.is_match(&i) {
             let c = i.chars()
                 .nth(0)
-                .expect("Atomic regular expection matched an empty string");
+                .expect("Atomic regular expression matched an empty string");
             
             return Ok( Self::Atomic(c) )
         }
@@ -155,6 +155,22 @@ impl Sentence {
             BIC => Ok( Self::Bic(l, r) ),
             _   => unreachable!("Tried to parse a non-existent main binary operator {main_op_c}")
         }
+    }
+
+    pub fn is_nec_signal(&self) -> bool {
+        let Sentence::Signal('□') = self else {
+            return false
+        };
+
+        true
+    }
+
+    pub fn is_bot_signal(&self) -> bool {
+        let Sentence::Signal('⊥') = self else {
+            return false
+        };
+
+        true
     }
 
     pub fn negated(&self) -> Self {
