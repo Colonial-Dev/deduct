@@ -478,7 +478,7 @@ mod tests {
 
         bad_proof! {
             [SYSTEM_T],
-            [(3, CheckError::RelaxedInside)],
+            [(3, CheckError::Unavailable)],
             0, "[]A", "PR",
             1, "[]", "PR",
             1, "[]A", "RT 1",
@@ -525,7 +525,49 @@ mod tests {
 
     #[test]
     fn complex_modal() {
+        // Homework 5-5
+        // Prove [](P v R) from []P
+        proof! {
+            [TFL_BASIC, SYSTEM_K],
+            0, "[]P", "PR",
+            1, "[]", "PR",
+            1, "P", "[]E 1",
+            1, "P v R", "vI 3",
+            0, "[](P v R)", "[]I 2-4",
+        }
 
+        // Homework 5-6
+        // Prove [](P -> R) from [](P -> Q) and [](Q -> P)
+        proof! {
+            [TFL_BASIC, SYSTEM_K],
+            0, "[](P -> Q)", "PR",
+            0, "[](Q -> R)", "PR",
+            1, "[]", "PR",
+            1, "P -> Q", "[]E 1",
+            1, "Q -> R", "[]E 2",
+            2, "P", "PR",
+            2, "Q", "->E 4 6",
+            2, "R", "->E 5 7",
+            1, "P -> R", "->I 6-8",
+            0, "[](P -> R)", "[]I 3-9",
+        }
+
+        // Homework 5-8
+        // Prove ~<>P from [](P -> Q) and []~Q
+        proof! {
+            [TFL_BASIC, SYSTEM_K],
+            0, "[](P -> Q)", "PR",
+            0, "[]~Q", "PR",
+            1, "[]", "PR",
+            1, "P -> Q", "[]E 1",
+            1, "~Q", "[]E 2",
+            2, "P", "PR",
+            2, "Q", "->E 4 6",
+            2, "#", "~E 5 7",
+            1, "~P", "~I 6-8",
+            0, "[]~P", "[]I 3-9",
+            0, "~<>P", "MC 10",
+        }
     }
 
     // TODO add error condition tests

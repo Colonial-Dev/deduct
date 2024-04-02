@@ -29,6 +29,6 @@ fuzz_target!(|data: ArbProof| {
     });
 
     if let Ok(p) = Proof::parse(&data.inner) {
-        c.check_proof(&p);
+        let _ = c.check_proof(&p);
     }
 });

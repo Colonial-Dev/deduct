@@ -137,7 +137,7 @@ pub trait Rule : Sync {
             if l.d == (ceil + 1) && l.is_premise() {
                 subproof_access[n as usize - 1] = true;
             }
-            // If the line is shallower than the ceiling value - i.e. we've left a subproof -
+            // If the line is shallower than the ceiling - i.e. we've left a subproof -
             // then the ceiling is lowered to match.
             else if l.d < ceil {
                 ceil -= 1;
@@ -160,12 +160,41 @@ pub trait Rule : Sync {
             return Err(CheckError::Unavailable)
         }
 
+        // If the rule being used is only valid in a strict subproof,
+        // ensure that holds.
         if self.strict_only() && !p.strict_zones[line.n as usize - 1] {
             return Err(CheckError::StrictOutside)
         }
         
-        if !self.strict_only() && !line.is_premise() && p.strict_zones[line.n as usize - 1] {
-            return Err(CheckError::RelaxedInside)
+        // If we're using a "non-strict" rule in a strict subproof,
+        // ensure it doesn't cite anything outside that subproof.
+        if !self.strict_only() && p.strict_zones[line.n as usize - 1] {
+            let mut bound = line.n - 1;
+
+            while bound != 0 {
+                let l = p.line(bound).unwrap();
+
+                if l.s.is_nec_signal() {
+                    break;
+                }
+
+                bound = bound.saturating_sub(1);
+            }
+
+            if line
+                .cited_lines()
+                .iter()
+                .any(|ln| match ln {
+                    LineNumber::One(n) => {
+                        *n < bound
+                    },
+                    LineNumber::Many(r) => {
+                        *r.start() < bound
+                    }
+                })
+            {
+                return Err(CheckError::Unavailable)
+            }
         }
 
         self.is_right(p, line)?;
@@ -194,8 +223,6 @@ pub enum CheckError {
     Unavailable,
     #[error("used a strict-subproof-only rule outside of a strict subproof")]
     StrictOutside,
-    #[error("used a disallowed rule inside of a strict subproof")]
-    RelaxedInside,
 }
 
 /* enum Citations<'a> {
@@ -931,7 +958,7 @@ impl Rule for RT {
         if s == l.s {
             return Ok(())
         }
-        
+
         Err(CheckError::BadUsage)
     }
 }
