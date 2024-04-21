@@ -2,6 +2,14 @@ use thiserror::Error;
 
 use crate::parse::*;
 
+/// An interface for validating proof rule usages.
+/// 
+/// `Rule` is implemented on marker structs. These are then cast to trait objects (`&dyn Rule`) and placed
+/// into a map keyed by canonical rule names - so, for example, `"^E"` maps to the trait object form of [`ConjunctionElim`].
+/// 
+/// Validating a rule usage is done by looking up the appropriate `Rule` implementation in the map and providing
+/// the [`Proof`] and [`Line`] under scrutiny to the [`validate`](Rule::validate) method, which returns either
+/// `()` (unit value, success case) or a [`CheckError`].
 pub trait Rule : Sync {
     /// Returns the order and type of lines uses of this rule should cite.
     fn line_ord(&self) -> &[LineNumberType];
@@ -224,11 +232,6 @@ pub enum CheckError {
     #[error("used a strict-subproof-only rule outside of a strict subproof")]
     StrictOutside,
 }
-
-/* enum Citations<'a> {
-    One(&'a Sentence),
-    Many(&'a Sentence, &'a Sentence)
-} */
 
 fn check_strict_nesting(p: &Proof, s: u16, e: u16) -> Result<(), CheckError> {
     let mut depth = 0_u16;
@@ -954,6 +957,10 @@ impl Rule for RT {
         let Sentence::Nec(s) = s else {
             return Err(CheckError::BadUsage)
         };
+
+        if p.strict_zones[l.n as usize - 1] {
+            return Err(CheckError::BadUsage)
+        }
 
         if s == l.s {
             return Ok(())

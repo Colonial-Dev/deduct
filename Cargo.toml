@@ -9,7 +9,7 @@ readme      = "README.md"
 license     = "AGPL-3.0"
 
 [profile.release]
-lto = "fat"
+lto = true
 codegen-units = 1
 strip = true
 
@@ -18,8 +18,8 @@ opt-level = 2
 
 [dependencies]
 # GUI
-egui = "0.27.0"
-eframe = { version = "0.27.0", features = ["persistence"] }
+egui = "0.27.2"
+eframe = { version = "0.27.2", features = ["persistence"] }
 
 # Logging and Errors
 env_logger = "0.11.3"

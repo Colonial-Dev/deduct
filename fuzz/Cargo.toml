@@ -1,35 +1,10 @@
 [package]
-name = "deduct-fuzz"
-version = "0.0.0"
-publish = false
+name = "afl-checker"
+version = "0.1.0"
 edition = "2021"
 
-[package.metadata]
-cargo-fuzz = true
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-libfuzzer-sys = { version = "0.4", features = ["arbitrary-derive"] }
-
-[dependencies.deduct]
-path = ".."
-
-[[bin]]
-name = "sentence_parser"
-path = "fuzz_targets/sentence_parser.rs"
-test = false
-doc = false
-bench = false
-
-[[bin]]
-name = "citation_parser"
-path = "fuzz_targets/citation_parser.rs"
-test = false
-doc = false
-bench = false
-
-[[bin]]
-name = "checker"
-path = "fuzz_targets/checker.rs"
-test = false
-doc = false
-bench = false
+afl = "*"
+deduct = { path = ".." }

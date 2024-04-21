@@ -7,6 +7,7 @@ use crate::parse::*;
 use crate::check::rules::*;
 
 pub type CheckErrors = Vec<(u16, CheckError)>;
+pub type Ruleset<'a> = &'a [(&'static str, &'static dyn Rule)];
 
 pub struct Checker {
     rules: HashMap<&'static str, &'static dyn Rule>
@@ -22,8 +23,16 @@ impl Checker {
         Self { rules }
     }
     
-    pub fn add_ruleset(&mut self, ruleset: &[(&'static str, &'static dyn Rule)]) {
-        self.rules.extend( ruleset.iter().map(|(i, r)| (*i, *r)) );
+    pub fn add_ruleset(&mut self, ruleset: Ruleset) {
+        for (id, rule) in ruleset {
+            self.rules.insert(id, *rule);
+        }
+    }
+
+    pub fn del_ruleset(&mut self, ruleset: Ruleset) {
+        for (id, _) in ruleset {
+            self.rules.remove(id);
+        }
     }
 
     pub fn check_proof(&self, p: &Proof) -> Result<(), CheckErrors> {
@@ -45,6 +54,12 @@ impl Checker {
         }
 
         Ok(())
+    }
+}
+
+impl Default for Checker {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -569,6 +584,4 @@ mod tests {
             0, "~<>P", "MC 10",
         }
     }
-
-    // TODO add error condition tests
 }

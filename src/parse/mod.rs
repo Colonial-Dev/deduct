@@ -185,7 +185,7 @@ pub fn normalize_ops(i: &str) -> String {
     static IMP_REGEX: Lazy<(Regex, &'static str)> = Lazy::new(|| (Regex::new(r#"(?:⇒|⊃|\->)"#).unwrap(), IMP) );
     static CON_REGEX: Lazy<(Regex, &'static str)> = Lazy::new(|| (Regex::new(r#"(?:\^|&|\.|·|\*)"#).unwrap(), CON) );
     static DIS_REGEX: Lazy<(Regex, &'static str)> = Lazy::new(|| (Regex::new(r#"v"#).unwrap(), DIS) );
-    static NEG_REGEX: Lazy<(Regex, &'static str)> = Lazy::new(|| (Regex::new(r#"(?:~|∼|-|−)"#).unwrap(), NEG) );
+    static NEG_REGEX: Lazy<(Regex, &'static str)> = Lazy::new(|| (Regex::new(r#"(?:~)"#).unwrap(), NEG) );
     static BOT_REGEX: Lazy<(Regex, &'static str)> = Lazy::new(|| (Regex::new(r#"(?:XX|#)"#).unwrap(), BOT) );
     static NEC_REGEX: Lazy<(Regex, &'static str)> = Lazy::new(|| (Regex::new(r#"\[\]"#).unwrap(), NEC) );
     static POS_REGEX: Lazy<(Regex, &'static str)> = Lazy::new(|| (Regex::new(r#"<>"#).unwrap(), POS) );

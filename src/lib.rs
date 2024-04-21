@@ -1,3 +1,4 @@
+//! Library module. Exports certain modules for fuzz testing.
 mod check;
 mod parse;
 

@@ -19,6 +19,8 @@ impl LineNumber {
     pub fn parse(i: &str) -> Result<Self, ParseError> {
         static NUM_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r#"\d{1,}"#).unwrap() );
 
+        let i = i.trim();
+
         let extract = |iter: &mut regex::Matches| -> Result<u16, _> {
             let v = iter
                 .next()
@@ -113,6 +115,8 @@ impl Citation {
         if i.trim().is_empty() {
             return Err(ParseError::EmptyCitation)
         }
+
+        let i = i.trim();
 
         let i = SEP_REGEX
             .replace_all(&normalize_ops(i), ",")
