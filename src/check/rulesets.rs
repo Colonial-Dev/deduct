@@ -1,5 +1,14 @@
 use super::rules::*;
 
+pub const ALL_RULESETS: &[&[(&str, &dyn Rule)]] = &[
+    TFL_BASIC,
+    TFL_DERIVED,
+    SYSTEM_K,
+    SYSTEM_T,
+    SYSTEM_S4,
+    SYSTEM_S5
+];
+
 pub const TFL_BASIC: &[(&str, &dyn Rule)] = &[
     ("R", &Reiteration),
     ("∧I", &ConjunctionIntr),

@@ -6,7 +6,6 @@ use egui::*;
 use serde::{Serialize, Deserialize};
 
 use crate::check::Checker;
-use crate::check::rulesets::*;
 
 use crate::parse::Proof;
 
@@ -17,7 +16,7 @@ const LINE_NUMBER_HORI_PAD  : f32 = 0.0;
 const LEFT_LINE_HORI_PAD    : f32 = LINE_NUMBER_HORI_PAD + 5.0;
 const SUBPROOF_INDENTATION  : f32 = 15.0;
 const SUBPROOF_LINE_PAD     : f32 = 5.0;
-const SENTENCE_CITATION_PAD : f32 = 15.0;
+const SENTENCE_CITATION_PAD : f32 = 10.0;
 
 #[derive(Serialize, Deserialize)]
 #[serde(default)]
@@ -28,14 +27,37 @@ pub struct Deduct {
     check: String,
     #[serde(skip)]
     show_prefs: bool,
+    #[serde(skip)]
+    show_new_p: bool,
+    #[serde(skip)]
+    new_proof: NewProof,
 }
 
-#[derive(Debug)]
+// TODO jfc this is a mess, MODULARIZE
+
+#[derive(Debug, Default)]
 pub struct LineUi {
     pub premise  : bool,
     pub depth    : u16,
     pub sentence : String,
     pub citation : String,
+}
+
+impl LineUi {
+    pub fn new(premise: bool, depth: u16) -> Self {
+        let mut citation = String::new();
+
+        if premise {
+            citation = "PR".to_string()
+        }
+        
+        Self {
+            premise,
+            depth,
+            citation,
+            ..Default::default()
+        }
+    }
 }
 
 #[derive(Default)]
@@ -48,12 +70,7 @@ pub struct ProofUi {
 }
 
 impl ProofUi {
-    pub fn new() -> Self {
-        let mut new = Self::default();
-        new.checker.add_ruleset(check::rulesets::TFL_BASIC);
-        new
-    }
-
+    // TODO account for zero-premise case (theorem)
     fn draw_surroundings(&mut self, ui: &mut Ui, p: &Painter) -> (f32, f32) {
         // Prefetch TeX mathematics font.
         let font = FontId::new(
@@ -69,7 +86,7 @@ impl ProofUi {
         );
 
         // Pull out the width and height of the largest line number.
-        let w = max.rect.width() * 2.0;
+        let w = max.rect.width();
         let h = max.rect.height();
 
         // Init Y-axis pointer value, starting from the top of the painter area.
@@ -100,6 +117,8 @@ impl ProofUi {
             Color32::RED
         );
 
+        let w = w + LINE_NUMBER_VERT_PAD;
+
         // Bump Y-axis pointer downwards.
         y += h + LINE_NUMBER_VERT_PAD;
 
@@ -121,7 +140,7 @@ impl ProofUi {
             }
 
             // Fudge factor.
-            max_width *= 1.20;
+            max_width += SENTENCE_CITATION_PAD;
 
             // Draw a horizontal line separating the premises from the body of the proof.
             p.hline(
@@ -162,6 +181,84 @@ impl ProofUi {
 
         // Return the computed line number width and height for use in rendering the proof body.
         (w, h)
+    }
+
+    fn draw_linectl(&mut self, n: usize, ui: &mut Ui) {
+        let premise = self.lines[n].premise;
+        let depth   = self.lines[n].depth;
+
+        // The delete line button is available everywhere except the starting premises.
+        if !(premise && depth == 0) && ui.button("X")
+            .on_hover_text("Remove this line")
+            .clicked()
+        {
+            if premise {
+                let mut end = n;
+
+                for i in (n + 1)..self.lines.len() {
+                    end = i;
+    
+                    if (self.lines[i].premise && self.lines[i].depth == depth) || self.lines[i].depth < depth {
+                        break;
+                    }
+                }
+
+                self.lines.drain(n..end); 
+            }
+            else {
+                self.lines.remove(n);
+            }
+        }
+
+        // The new line below button is universal.
+        if ui.button("NL")
+            .on_hover_text("Create a new line below this one")
+            .clicked() 
+            {
+                self.lines.insert(
+                    n + 1,
+                    LineUi::new(false, depth)
+                )
+            }
+        
+        // The new subproof below button is universal.
+        if ui.button("NS")
+            .on_hover_text("Create a new subproof below this line")
+            .clicked() 
+            {
+                self.lines.insert(
+                    n + 1,
+                    LineUi::new(true, depth + 1)
+                )
+            }
+
+        let (n_premise, n_depth) = self
+            .lines
+            .get(n + 1)
+            .map(|l| (l.premise, l.depth) )
+            .unwrap_or( (false, 0) );
+
+        if (n_premise || n_depth < depth) && depth != 0 {
+            if ui.button("NLO")
+                .on_hover_text("Create a new line below/outside this subproof")
+                .clicked()
+                {
+                    self.lines.insert(
+                        n + 1,
+                        LineUi::new(false, depth - 1)
+                    )
+                }
+
+            if ui.button("NSO")
+                .on_hover_text("Create a new subproof below/outside this one")
+                .clicked()
+                {
+                    self.lines.insert(
+                        n + 1,
+                        LineUi::new(true, depth)
+                    )
+                }
+        }
     }
 
     pub fn draw(&mut self, ctx: &Context, ui: &mut Ui) {          
@@ -209,7 +306,8 @@ impl ProofUi {
             }
         }
 
-        sentence_max_width *= 2.0;
+        // Fudge factor.
+        sentence_max_width += SENTENCE_CITATION_PAD;
 
         // Compute starting X coordinate for citation field.
         let mut citation_x_start = x;
@@ -256,7 +354,7 @@ impl ProofUi {
             let mut x_start = x;
             x_start += SUBPROOF_INDENTATION * line.depth as f32;
 
-            let mut x_end = x;
+            let mut x_end = x_start;
             x_end += sentence_max_width;
             
             let res = ui.put(
@@ -283,9 +381,8 @@ impl ProofUi {
                 x_start += SUBPROOF_INDENTATION * line.depth as f32;
                 x_start -= SUBPROOF_LINE_PAD;
 
-                let mut x_end = x_start;
-                x_end += sentence_max_width;
-                x_end += SUBPROOF_LINE_PAD * 2.0;
+                let mut x_end = citation_x_start;
+                x_end -= SENTENCE_CITATION_PAD;
 
                 p.hline(
                     x_start..=x_end,
@@ -311,35 +408,6 @@ impl ProofUi {
                 }
             }
 
-            let r = Rect::from_two_pos(pos2(0.0, y), pos2(linectl_x_end, y + 90.0));
-
-            if let Some(pointer) = ctx.input(|i| i.pointer.hover_pos() ) {
-                if r.contains(self.transform.inverse() * pointer) {
-                    if line.premise || line.depth == 0 {
-                        ui.put(
-                            Rect::from_two_pos(pos2(linectl_x_start, y), pos2(linectl_x_end, y + h)),
-                            |ui: &mut Ui| ui.horizontal(|ui| {
-                                ui.button("X");
-                                ui.button("NL");
-                                ui.button("NS")
-                            }).inner
-                        );
-                    }
-                    else {
-                        ui.put(
-                            Rect::from_two_pos(pos2(linectl_x_start, y), pos2(linectl_x_end, y + h)),
-                            |ui: &mut Ui| ui.horizontal(|ui| {
-                                ui.button("X");
-                                ui.button("NL");
-                                ui.button("NS");
-                                ui.button("NLO");
-                                ui.button("NSO")
-                            }).inner
-                        );
-                    }      
-                }
-            }
-
             // Go back and draw nested subproof lines where needed.
             if line.depth > 0 {
                 let y_end = y + (h + LINE_NUMBER_VERT_PAD / 2.0);
@@ -360,76 +428,138 @@ impl ProofUi {
 
             y += h + LINE_NUMBER_VERT_PAD;
         }
+
+        let mut y = 0.0 + (h + LINE_NUMBER_VERT_PAD);
+
+        for i in 0..self.lines.len() {
+            let hover_zone = Rect::from_two_pos(pos2(0.0, y), pos2(linectl_x_end, y + 90.0));
+
+            let linectl_r = Rect::from_two_pos(
+                pos2(linectl_x_start, y),
+                pos2(linectl_x_end, y + h)
+            );
+
+            // Because the size can change during loops, we add a check
+            // and break if we're out of bounds.           
+            if i >= self.lines.len() {
+                break;
+            }
+    
+            if let Some(pointer) = ctx.input(|i| i.pointer.hover_pos() ) {
+                if hover_zone.contains(self.transform.inverse() * pointer) {
+                    ui.put(
+                        linectl_r,
+                        |ui: &mut Ui| ui.horizontal(|ui| {
+                            self.draw_linectl(i, ui);
+
+                            ui.allocate_response(
+                                Vec2::ZERO,
+                                Sense::click()
+                            )
+                        }).inner
+                    );
+                }
+            }
+
+            y += h + LINE_NUMBER_VERT_PAD;
+        }
+
+        if self.transform.translation.y < -y + 100.0 {
+            self.transform.translation.y = -y + 100.0;
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct NewProof {
+    pub premises   : String,
+    pub conclusion : String,
+    pub error      : String,
+    pub rules      : [bool; 6]
+}
+
+impl NewProof {
+    pub fn try_create(&mut self) -> Option<ProofUi> {
+        let mut checker = Checker::new();
+        let mut lines = Vec::new();
+
+        let premises: Vec<_> = self
+            .premises
+            .split(',')
+            .map(str::trim)
+            .map(str::to_owned)
+            .collect();
+
+        if !self.premises.trim().is_empty() {
+            for (i, premise) in premises.iter().enumerate() {
+                if let Err(e) = parse::Sentence::parse(premise) {
+                    self.error = format!("Premise {} is not well formed ({e})", i + 1);
+                    return None;
+                }
+            }
+
+            for premise in &premises {
+                let line = LineUi {
+                    premise: true,
+                    depth: 0,
+                    sentence: premise.to_owned(),
+                    citation: "PR".to_owned()
+                };
+    
+                lines.push(line);
+            }
+        }
+
+        if let Err(e) = parse::Sentence::parse(&self.conclusion) {
+            self.error = format!("Conclusion is not well formed ({e})");
+            return None;
+        }
+
+
+        for (i, rule) in self.rules.iter().enumerate() {
+            if *rule {
+                checker.add_ruleset(check::rulesets::ALL_RULESETS[i])
+            }
+        }
+
+
+        let new_ui = ProofUi {
+            premises: premises.clone(),
+            conclusion: self.conclusion.clone(),
+            checker,
+            lines,
+            ..Default::default()
+        };
+
+        self.premises.clear();
+        self.conclusion.clear();
+        self.error.clear();
+
+        Some(new_ui)
+    }
+}
+
+impl Default for NewProof {
+    fn default() -> Self {
+        Self {
+            premises: String::new(),
+            conclusion: String::new(),
+            error: String::new(),
+            rules: [true, false, false, false, false, false]
+        }
     }
 }
 
 impl Default for Deduct {
     fn default() -> Self {
-        let mut proof = ProofUi::new();
-
-        proof.premises = vec!["¬A".to_owned()];
-        proof.conclusion = "¬A".to_owned();
-
-        proof.lines.push(LineUi {
-            premise: true,
-            depth: 0,
-            sentence: "¬A".to_string(),
-            citation: "PR".to_string()
-        });
-
-        proof.lines.push(LineUi {
-            premise: true,
-            depth: 1,
-            sentence: "A".to_string(),
-            citation: "PR".to_string()
-        });
-
-        proof.lines.push(LineUi {
-            premise: true,
-            depth: 2,
-            sentence: "A".to_string(),
-            citation: "PR".to_string()
-        });
-
-        proof.lines.push(LineUi {
-            premise: false,
-            depth: 2,
-            sentence: "#".to_string(),
-            citation: "~E 1 2".to_string()
-        });
-
-        proof.lines.push(LineUi {
-            premise: true,
-            depth: 2,
-            sentence: "A".to_string(),
-            citation: "PR".to_string()
-        });
-
-        proof.lines.push(LineUi {
-            premise: false,
-            depth: 2,
-            sentence: "#".to_string(),
-            citation: "~E 1 2".to_string()
-        });
-
-        proof.lines.push(LineUi {
-            premise: false,
-            depth: 1,
-            sentence: "#".to_string(),
-            citation: "~E 1 2".to_string()
-        });
-
-        proof.lines.push(LineUi {
-            premise: false,
-            depth: 0,
-            sentence: "~A".to_string(),
-            citation: "~I 2-4".to_string()
-        });
+        let proof = ProofUi::default();
 
         Self {
             proof,
             check: Default::default(),
             show_prefs: false,
+            show_new_p: false,
+            new_proof: Default::default(),
         }
     }
 }
@@ -506,7 +636,10 @@ impl eframe::App for Deduct {
                 }*/
 
                 ui.menu_button("Proof", |ui| {
-                    ui.button("New...");
+                    if ui.button("New...").clicked() {
+                        self.show_new_p = true;
+                    };
+
                     ui.button("Alter Rulesets");
                     ui.button("Restart");
                     ui.separator();
@@ -548,28 +681,8 @@ impl eframe::App for Deduct {
                 });
         });    
 
-        egui::CentralPanel::default().show(ctx, |ui| {
-            // The central panel the region left after adding TopPanel's and SidePanel's
-            /* ui.heading("eframe template");
-
-            ui.horizontal(|ui| {
-                ui.label("Write something: ");
-                ui.text_edit_singleline(&mut self.label);
-            });
-
-            ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
-            if ui.button("Increment").clicked() {
-                self.value += 1.0;
-            }
-
-            ui.separator();
-
-            ui.add(egui::github_link_file!(
-                "https://github.com/emilk/eframe_template/blob/master/",
-                "Source code."
-            ));*/
-            
-
+        egui::CentralPanel::default()
+            .show(ctx, |ui| {
             let (id, rect) = ui.allocate_space(Vec2::new(w * 0.70, h * 0.80));
 
             let transform = &mut self.proof.transform;
@@ -588,6 +701,7 @@ impl eframe::App for Deduct {
             let transform = *transform * emath::TSTransform::from_translation(
                 Vec2::new(0.0, ui.min_rect().left_top().y)
             );
+
             let id = egui::Area::new(id.with("proof_area") )
                 .order(egui::Order::Foreground)
                 .show(ui.ctx(), |ui| {
@@ -653,10 +767,11 @@ impl eframe::App for Deduct {
         });
 
         egui::Window::new("Preferences")
-            .default_open(false)
+            .default_open(true)
+            .collapsible(false)
+            .resizable(false)
             .open(&mut self.show_prefs)
             .anchor(egui::Align2::CENTER_CENTER, (0.0, 0.0))
-            .resizable(false)
             .show(ctx, |ui| {
                 ui.horizontal(|ui| {
                     ui.label("Theme: ");
@@ -670,6 +785,91 @@ impl eframe::App for Deduct {
                     // add combo box
                 });
             });
+        
+        egui::Window::new("New Proof")
+            .default_open(true)
+            .collapsible(false)
+            .resizable(false)
+            .open(&mut self.show_new_p)
+            .anchor(egui::Align2::CENTER_CENTER, (0.0, 0.0))
+            .min_width(w * 0.30)
+            .show(ctx, |ui| {
+                let font = FontId::new(
+                    SENTENCE_FONT_SIZE,
+                    FontFamily::Name( "math".into() )
+                );
+
+                ui.horizontal(|ui| {
+                    ui.vertical(|ui| {
+                        ui.checkbox(&mut self.new_proof.rules[0], "Basic TFL");
+                        ui.checkbox(&mut self.new_proof.rules[1], "Derived TFL");
+                        ui.checkbox(&mut self.new_proof.rules[2], "System K");
+                    });
+
+                    ui.vertical(|ui| {
+                        ui.checkbox(&mut self.new_proof.rules[3], "System T");
+                        ui.checkbox(&mut self.new_proof.rules[4], "System S4");
+                        ui.checkbox(&mut self.new_proof.rules[5], "System S5");
+                    });
+
+                    let highest = self
+                        .new_proof
+                        .rules
+                        .iter()
+                        .enumerate()
+                        .rev()
+                        .find(|(_, v)| **v)
+                        .map(|(i, _)| i)
+                        .unwrap_or_default();
+
+                    for i in 0..highest {
+                        self.new_proof.rules[i] = true;
+                    }
+
+                    ui.separator();
+
+                    ui.vertical(|ui| {
+                        let p = TextEdit::singleline(&mut self.new_proof.premises)
+                            .hint_text("Premises...")
+                            .font(font.clone())
+                            .desired_width(f32::INFINITY)
+                            .show(ui);
+
+                        let c = TextEdit::singleline(&mut self.new_proof.conclusion)
+                            .hint_text("Conclusion...")
+                            .font(font.clone())
+                            .desired_width(f32::INFINITY)
+                            .show(ui);
+
+                        if p
+                            .response
+                            .on_hover_text("Proof premises (comma-separated)")
+                            .changed() 
+                        {
+                            self.new_proof.premises = parse::normalize_ops(&self.new_proof.premises)
+                        }
+
+                        if c
+                            .response
+                            .on_hover_text("Proof conclusion")
+                            .changed() 
+                        {
+                            self.new_proof.conclusion = parse::normalize_ops(&self.new_proof.conclusion)
+                        }
+
+                        ui.label(&self.new_proof.error);
+                    });
+                });
+
+                ui.separator();
+                
+                if ui.button("Create proof").clicked() {
+                    if let Some(ui) = self.new_proof.try_create() {
+                        self.proof = ui;
+                    }
+                }
+            });
+
     }
 }
 
