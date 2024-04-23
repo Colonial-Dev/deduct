@@ -37,7 +37,7 @@ pub const TFL_DERIVED: &[(&str, &dyn Rule)] = &[
 pub const SYSTEM_K: &[(&str, &dyn Rule)] = &[
     ("□I", &NecessityIntr),
     ("□E", &NecessityElim),
-    ("Def◇", &PossibilityDef),
+    ("Def⋄", &PossibilityDef),
     ("MC", &ModalConversion)
 ];
 

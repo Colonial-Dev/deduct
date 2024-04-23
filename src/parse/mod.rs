@@ -15,7 +15,7 @@ mod consts {
     pub const IMP: &str = "→";
     pub const BOT: &str = "⊥";
     pub const NEC: &str = "□";
-    pub const POS: &str = "◇";
+    pub const POS: &str = "⋄";
 }
 
 pub use sentence::Sentence;
@@ -174,6 +174,26 @@ impl Proof {
     pub fn line(&self, n: u16) -> Option<&Line> {
         self.lines.get(n as usize - 1)
     }
+
+    pub fn reached_conclusion(&self, conclusion: &str) -> bool {
+        let Ok(s) = Sentence::parse(conclusion) else {
+            return false;
+        };
+
+        for line in self.lines.iter().filter(|l| l.d == 0) {
+            if line.s == s { return true }
+        }
+
+        false
+    }
+
+    pub fn contains_placeholders(&self) -> bool {
+        for line in &self.lines {
+            if line.c.r.contains('?') { return true }
+        }
+
+        false
+    }
 }
 
 /// Normalize operator shorthands in a given string.
@@ -181,9 +201,9 @@ pub fn normalize_ops(i: &str) -> String {
     use std::ops::Deref;
     use consts::*;
     
-    static BIC_REGEX: Lazy<(Regex, &'static str)> = Lazy::new(|| (Regex::new(r#"(?:≡|<\->)"#).unwrap(), BIC) );
-    static IMP_REGEX: Lazy<(Regex, &'static str)> = Lazy::new(|| (Regex::new(r#"(?:⇒|⊃|\->)"#).unwrap(), IMP) );
-    static CON_REGEX: Lazy<(Regex, &'static str)> = Lazy::new(|| (Regex::new(r#"(?:\^|&|\.|·|\*)"#).unwrap(), CON) );
+    static BIC_REGEX: Lazy<(Regex, &'static str)> = Lazy::new(|| (Regex::new(r#"(?:<\->)"#).unwrap(), BIC) );
+    static IMP_REGEX: Lazy<(Regex, &'static str)> = Lazy::new(|| (Regex::new(r#"(?:\->)"#).unwrap(), IMP) );
+    static CON_REGEX: Lazy<(Regex, &'static str)> = Lazy::new(|| (Regex::new(r#"(?:\^|&)"#).unwrap(), CON) );
     static DIS_REGEX: Lazy<(Regex, &'static str)> = Lazy::new(|| (Regex::new(r#"v"#).unwrap(), DIS) );
     static NEG_REGEX: Lazy<(Regex, &'static str)> = Lazy::new(|| (Regex::new(r#"(?:~)"#).unwrap(), NEG) );
     static BOT_REGEX: Lazy<(Regex, &'static str)> = Lazy::new(|| (Regex::new(r#"(?:XX|#)"#).unwrap(), BOT) );

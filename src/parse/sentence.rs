@@ -32,7 +32,7 @@ impl Sentence {
         static SIGNAL_REGEX   : Lazy<Regex> = Lazy::new(|| Regex::new("^[⊥□]$").unwrap() );
         static BOT_REGEX      : Lazy<Regex> = Lazy::new(|| Regex::new("⊥").unwrap() );
         static ATOMIC_REGEX   : Lazy<Regex> = Lazy::new(|| Regex::new("^[A-Z]$").unwrap() );
-        static OP_REGEX       : Lazy<Regex> = Lazy::new(|| Regex::new("[¬∧∨↔→⊥□◇]").unwrap() );
+        static OP_REGEX       : Lazy<Regex> = Lazy::new(|| Regex::new("[¬∧∨↔→⊥□⋄]").unwrap() );
         
         // Take care of any loose whitespace before we proceed
         let i = i.trim();
@@ -230,7 +230,7 @@ fn normalize_braces(i: &str) -> String {
 }
 
 fn invalid_chars(i: &str) -> Result<(), ParseError> {
-    static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r#"[^A-Z¬∨∧↔→⊥□◇\s\)\(\]\[\}\{]"#).unwrap() );
+    static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r#"[^A-Z¬∨∧↔→⊥□⋄\s\)\(\]\[\}\{]"#).unwrap() );
 
     let captures: Vec<_> = REGEX.find_iter(i)
         .map(|m| m.as_str() )
@@ -266,7 +266,7 @@ fn compute_depths(i: &str) -> Result<Box<[u16]>, ParseError> {
 }
 
 fn is_una_op(c: char) -> bool {
-    matches!(c, '¬' | '⊥' | '□' | '◇')
+    matches!(c, '¬' | '⊥' | '□' | '⋄')
 }
 
 fn is_bin_op(c: char) -> bool {
@@ -317,7 +317,7 @@ mod tests {
         );
     }
 
-    // [¬∧∨↔→⊥□◇]
+    // [¬∧∨↔→⊥□⋄]
     #[test]
     fn bad_unary() {
         assert_eq!(
@@ -331,7 +331,7 @@ mod tests {
         );
 
         assert_eq!(
-            Sentence::parse("A◇B").unwrap_err(),
+            Sentence::parse("A⋄B").unwrap_err(),
             ParseError::BadUnary
         );
     }
@@ -410,7 +410,7 @@ mod tests {
 
     #[test]
     fn pos() {
-        let pos = Sentence::parse("◇A").unwrap();
+        let pos = Sentence::parse("⋄A").unwrap();
 
         assert_eq!(
             pos,
@@ -419,7 +419,7 @@ mod tests {
             )
         );
 
-        let pos = Sentence::parse("◇◇A").unwrap();
+        let pos = Sentence::parse("⋄⋄A").unwrap();
 
         assert_eq!(
             pos,
