@@ -4,23 +4,29 @@ use serde::{Deserialize, Serialize};
 mod popups;
 mod proof;
 
+#[cfg(not(target_arch = "wasm32"))]
+const MODIFIER: Modifiers = Modifiers::ALT;
+
+#[cfg(target_arch = "wasm32")]
+const MODIFIER: Modifiers = Modifiers::CTRL.plus(Modifiers::ALT);
+
 const NEW_L: KeyboardShortcut = KeyboardShortcut::new(
-    Modifiers::ALT,
+    MODIFIER,
     Key::Q
 );
 
 const NEW_S: KeyboardShortcut = KeyboardShortcut::new(
-    Modifiers::ALT,
+    MODIFIER,
     Key::W
 );
 
 const NEW_LO: KeyboardShortcut = KeyboardShortcut::new(
-    Modifiers::ALT,
+    MODIFIER,
     Key::A
 );
 
 const NEW_SO: KeyboardShortcut = KeyboardShortcut::new(
-    Modifiers::ALT,
+    MODIFIER,
     Key::S
 );
 
@@ -262,9 +268,16 @@ fn about(ui: &mut Ui) {
             format!("Version {}", env!("CARGO_PKG_VERSION"))
         );
 
-        ui.hyperlink_to(
-            "Source Code",
-            env!("CARGO_PKG_REPOSITORY")
+        ui.add(
+            Hyperlink::from_label_and_url(
+                "Source Code", env!("CARGO_PKG_REPOSITORY")
+            ).open_in_new_tab(true)
+        );
+
+        ui.add(
+            Hyperlink::from_label_and_url(
+                "Report an Issue", format!("{}/issues", env!("CARGO_PKG_REPOSITORY"))
+            ).open_in_new_tab(true)
         );
 
         ui.separator();

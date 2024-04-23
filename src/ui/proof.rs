@@ -501,7 +501,7 @@ impl Widget for &mut ProofUi {
         if let Some(pointer) = ui.ctx().input(|i| i.pointer.hover_pos() ) {
             if rect.contains(pointer) {
                 let pan_delta = ui.ctx().input(|i| i.smooth_scroll_delta);
-                *transform = *transform * emath::TSTransform::from_translation(pan_delta);
+                *transform = *transform * emath::TSTransform::from_translation(Vec2::new(0.0, pan_delta.y));
             }
         }
 

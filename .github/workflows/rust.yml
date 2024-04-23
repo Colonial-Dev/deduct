@@ -1,22 +1,55 @@
 name: Cargo Comprehensive
 
-on:
-  push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
+on: [push, pull_request, workflow_dispatch]
 
 env:
   CARGO_TERM_COLOR: always
+  RUSTFLAGS: --cfg=web_sys_unstable_apis
 
 jobs:
-  build:
-
+  check:
+    name: Check Native
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v3
-    - name: Build
-      run: cargo build
-    - name: Run tests
-      run: cargo test
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --all-features
+
+  check_wasm:
+    name: Check WASM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: wasm32-unknown-unknown
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --all-features --lib --target wasm32-unknown-unknown
+
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - run: sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --lib
