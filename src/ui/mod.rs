@@ -4,30 +4,54 @@ use serde::{Deserialize, Serialize};
 mod popups;
 mod proof;
 
-#[cfg(not(target_arch = "wasm32"))]
 const MODIFIER: Modifiers = Modifiers::ALT;
 
-#[cfg(target_arch = "wasm32")]
-const MODIFIER: Modifiers = Modifiers::CTRL.plus(Modifiers::ALT);
-
+#[cfg(not(target_arch = "wasm32"))]
 const NEW_L: KeyboardShortcut = KeyboardShortcut::new(
     MODIFIER,
     Key::Q
 );
 
+#[cfg(not(target_arch = "wasm32"))]
 const NEW_S: KeyboardShortcut = KeyboardShortcut::new(
     MODIFIER,
     Key::W
 );
 
+#[cfg(not(target_arch = "wasm32"))]
 const NEW_LO: KeyboardShortcut = KeyboardShortcut::new(
     MODIFIER,
     Key::A
 );
 
+#[cfg(not(target_arch = "wasm32"))]
 const NEW_SO: KeyboardShortcut = KeyboardShortcut::new(
     MODIFIER,
     Key::S
+);
+
+#[cfg(target_arch = "wasm32")]
+const NEW_L: KeyboardShortcut = KeyboardShortcut::new(
+    MODIFIER,
+    Key::O
+);
+
+#[cfg(target_arch = "wasm32")]
+const NEW_S: KeyboardShortcut = KeyboardShortcut::new(
+    MODIFIER,
+    Key::P
+);
+
+#[cfg(target_arch = "wasm32")]
+const NEW_LO: KeyboardShortcut = KeyboardShortcut::new(
+    MODIFIER,
+    Key::K
+);
+
+#[cfg(target_arch = "wasm32")]
+const NEW_SO: KeyboardShortcut = KeyboardShortcut::new(
+    MODIFIER,
+    Key::L
 );
 
 const UI_ZOOM_FACTORS: [f32; 5] = [1.0, 1.25, 1.50, 1.75, 2.0];
