@@ -6,8 +6,8 @@ mod ui;
 fn main() {
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size([720.0, 720.0])
-            .with_min_inner_size([720.0, 720.0]),
+            .with_inner_size([1024.0, 720.0])
+            .with_min_inner_size([1024.0, 720.0]),
             // TODO add icon
         ..Default::default()
     };

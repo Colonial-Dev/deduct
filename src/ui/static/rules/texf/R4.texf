@@ -1,0 +1,7 @@
+$\begin{nd}
+\have[i]{ab}{\Box\meta{A}}
+\open
+	\hypo[ ]{a}{\Box}
+	\have[j]{nb}{\Box \meta{A}}\by{R4}{ab}
+\close
+\end{nd}$

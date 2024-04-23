@@ -1,0 +1,7 @@
+$\begin{nd}
+\have[i]{ab}{\enot \Box\meta{A}}
+\open
+	\hypo[ ]{a}{\Box}
+	\have[j]{nb}{\enot \Box \meta{A}}\by{R5}{ab}
+\close
+\end{nd}$

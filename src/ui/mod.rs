@@ -46,6 +46,8 @@ pub struct Deduct {
 
 impl Deduct {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        egui_extras::install_image_loaders(&cc.egui_ctx);
+
         fonts_init(cc);
 
         if let Some(storage) = cc.storage {
@@ -68,8 +70,8 @@ impl Deduct {
         if let Some(ui) = self.new.try_create() {
             self.proof = Some(ui);
             self.vis.new_proof = false;
-            self.new.ready = false;
         }
+        self.new.ready = false;
     }
 
     fn handle_shortcuts(&mut self, ctx: &Context) {
@@ -180,32 +182,97 @@ impl eframe::App for Deduct {
             });
 
         });
-        
+
         egui::SidePanel::right("proof_rules")
             .resizable(false)
             .min_width(w * 0.25)
             .max_width(w * 0.25)
             .show(ctx, |ui| {
                 containers::ScrollArea::vertical().show(ui, |ui| {                   
+                    let tint = if self.prefs.dark_mode { Color32::WHITE } else { Color32::BLACK };
+
+                    macro_rules! rule {
+                        ($ui:ident, $path:literal) => {
+                            $ui.add(
+                                egui::Image::new(egui::include_image!($path))
+                                    .tint(tint)
+                                    .fit_to_fraction(
+                                        Vec2::new(0.975, f32::INFINITY)
+                                    )
+                            );
+                        };
+                    }
+
                     ui.collapsing("Operator Shorthands", |ui| {
-                        ui.label("Negation: ~");
-                        ui.label("Conjunction: ^ or &");
-                        ui.label("Disjunction: v");
-                        ui.label("Biconditional: <->");
-                        ui.label("Conditional: ->");
-                        ui.label("Contradiction: XX or #");
-                        ui.separator();
-                        ui.label("Necessity: []");
-                        ui.label("Possibility: <>");
+                        Grid::new("shorthand_grid")
+                        .striped(true)
+                        .num_columns(2)
+                        .show(ui, |ui| {
+                            let placeholder_tt = "Can be used to validate any arbitrary sentence.\nProofs that have reached the conclusion but still contain placeholders will be flagged as incomplete.";
+
+                            ui.label("Placeholder").on_hover_text(placeholder_tt);
+                            ui.label("?").on_hover_text(placeholder_tt);
+                            ui.end_row();
+
+                            ui.label("Negation");
+                            ui.label("~");
+                            ui.end_row();
+
+                            ui.label("Conjunction");
+                            ui.label("^ or &");
+                            ui.end_row();
+
+                            ui.label("Disjunction");
+                            ui.label("v");
+                            ui.end_row();
+
+                            ui.label("Conditional");
+                            ui.label("->");
+                            ui.end_row();
+
+                            ui.label("Biconditional");
+                            ui.label("<->");
+                            ui.end_row();
+
+                            ui.label("Contradiction");
+                            ui.label("XX or #");
+                            ui.end_row();
+
+                            ui.label("Necessity");
+                            ui.label("[ ]");
+                            ui.end_row();
+
+                            ui.label("Possibility");
+                            ui.label("<>");
+                            ui.end_row();
+                        });
                     });
 
                     ui.separator();
-                    ui.collapsing("Basic TFL", |ui| {});
-                    ui.collapsing("Derived TFL", |ui| {});
-                    ui.collapsing("System K", |ui| {});
-                    ui.collapsing("System T", |ui| {});
-                    ui.collapsing("System S4", |ui| {});
-                    ui.collapsing("System S5", |ui| {});
+
+                    ui.collapsing("Basic TFL", |ui| {
+                        rule!(ui, "static/rules/TFL.png");
+                    });
+
+                    ui.collapsing("Derived TFL", |ui| {
+                        rule!(ui, "static/rules/TFLD.png");
+                    });
+
+                    ui.collapsing("System K", |ui| {
+                        rule!(ui, "static/rules/K.png");
+                    });
+
+                    ui.collapsing("System T", |ui| {
+                        rule!(ui, "static/rules/RT.png");
+                    });
+
+                    ui.collapsing("System S4", |ui| {
+                        rule!(ui, "static/rules/R4.png");
+                    });
+
+                    ui.collapsing("System S5", |ui| {
+                        rule!(ui, "static/rules/R5.png");
+                    });
                 });
         });
 
@@ -349,7 +416,7 @@ fn fonts_init(cc: &eframe::CreationContext<'_>) {
 
     fonts.font_data.insert(
         "math".to_owned(),
-        FontData::from_static( include_bytes!("../static/latinmodern-math.otf") )
+        FontData::from_static( include_bytes!("static/latinmodern-math.otf") )
     );
 
     fonts.families.insert(

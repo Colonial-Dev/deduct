@@ -1,0 +1,5 @@
+$\begin{nd}
+	\have[m]{ab}{\Box \meta{A}}
+	\have[\ ]{a}{\meta{A}} \by{RT}{ab}
+\end{nd}$
+

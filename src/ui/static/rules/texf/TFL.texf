@@ -1,0 +1,79 @@
+$\begin{nd}
+	\have[m]{a}{\meta{A}}
+	\have[\ ]{c}{\meta{A}} \by{R}{a}
+
+	\have[m]{a}{\meta{A}}
+\\	\have[n]{b}{\meta{B}}
+	\have[\ ]{c}{\meta{A}\eand\meta{B}} \ai{a, b}
+
+	\have[m]{ab}{\meta{A}\eand\meta{B}}
+\\	\have[\ ]{a}{\meta{A}} \ae{ab}
+
+	\have[m]{ab}{\meta{A}\eand\meta{B}}
+\\	\have[\ ]{b}{\meta{B}} \ae{ab}
+
+	\have[m]{a}{\meta{A}}
+\\	\have[\ ]{ab}{\meta{A}\eor\meta{B}}\oi{a}
+
+	\have[m]{a}{\meta{A}}
+\\	\have[\ ]{ba}{\meta{B}\eor\meta{A}}\oi{a}
+
+	\have[m]{ab}{\meta{A}\eor\meta{B}}
+\\	\open
+		\hypo[i]{a}{\meta{A}}
+		\have[j]{c1}{\meta{C}}
+	\close
+	\open
+		\hypo[k]{b}{\meta{B}}
+		\have[l]{c2}{\meta{C}}
+	\close
+	\have[\ ]{c}{\meta{C}} \oe{ab,a-c1, b-c2}
+
+\open
+		\hypo[i]{a}{\meta{A}}
+		\have[j]{b}{\meta{B}}
+\close
+\have[\hskip .8em]{ab}{\meta{A}\eif\meta{B}}\ci{a-b}
+
+	\have[m]{ab}{\meta{A}\eif\meta{B}}
+\\	\have[n]{a}{\meta{A}}
+	\have[\ ]{b}{\meta{B}} \ce{ab,a}
+
+\open
+	\hypo[i]{a1}{\meta{A}} 
+\\	\have[j]{b1}{\meta{B}}
+\close
+\open
+	\hypo[k]{b2}{\meta{B}}
+	\have[l]{a2}{\meta{A}}
+\close
+\have[\hskip .8em]{ab}{\meta{A}\eiff\meta{B}}\bi{a1-b1,b2-a2}
+
+	\have[m]{ab}{\meta{A}\eiff\meta{B}}
+\\	\have[n]{a}{\meta{A}}
+	\have[\ ]{b}{\meta{B}} \be{ab,a}
+
+	\have[m]{ab}{\meta{A}\eiff\meta{B}}
+\\	\have[n]{a}{\meta{B}}
+	\have[\ ]{b}{\meta{A}} \be{ab,a}
+
+\open
+	\hypo[i]{a}{\meta{A}}
+\\	\have[j]{nb}{\ered}
+\close
+\have[\hskip .8em]{na}{\enot\meta{A}}\ni{a-nb}
+
+\have[m]{na}{\enot\meta{A}}
+\\ \have[n]{a}{\meta{A}}
+\have[ ]{bot}{\ered}\ri{na, a}
+
+   \have[m]{bot}{\ered}
+\\ \have[ ]{}{\meta{A}}\re{bot}
+
+\open
+	\hypo[i]{a}{\enot\meta{A}}
+\\	\have[j]{nb}{\ered}
+\close
+\have[\hskip .8em]{na}{\meta{A}}\ip{a-nb}
+\end{nd}$
+

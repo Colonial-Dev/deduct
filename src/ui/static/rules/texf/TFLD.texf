@@ -1,0 +1,38 @@
+$\begin{nd}
+	\have[m]{ab}{\meta{A} \eor \meta{B}}
+	\have[n]{nb}{\enot \meta{A}}
+	\have[\ ]{con}{\meta{B}}\by{DS}{ab, nb}
+
+	\have[m]{ab}{\meta{A} \eor \meta{B}}
+\\	\have[n]{nb}{\enot \meta{B}}
+	\have[\ ]{con}{\meta{A}}\by{DS}{ab, nb}
+
+    \have[m]{ab}{\meta{A}\eif\meta{B}}
+\\  \have[n]{a}{\enot\meta{B}}
+    \have[\ ]{b}{\enot\meta{A}} \by{MT}{ab,a}
+
+    \have[m]{dna}{\enot \enot \meta{A}}
+\\  \have[ ]{a}{\meta{A}}\dne{dna}
+
+    \open
+	  \hypo[i]{a}{\meta{A}}
+\\	  \have[j]{c1}{\meta{B}}
+    \close
+    \open
+	  \hypo[k]{b}{\enot\meta{A}}
+	  \have[l]{c2}{\meta{B}}
+    \close
+    \have[\hskip .8em]{ab}{\meta{B}}\tnd{a-c1,b-c2}
+
+	\have[m]{ab}{\enot (\meta{A} \eor \meta{B})}
+\\	\have[\ ]{dm}{\enot \meta{A} \eand \enot \meta{B}}\dem{ab}
+
+	\have[m]{ab}{\enot \meta{A} \eand \enot \meta{B}}
+\\	\have[\ ]{dm}{\enot (\meta{A} \eor \meta{B})}\dem{ab}
+
+	\have[m]{ab}{\enot (\meta{A} \eand \meta{B})}
+\\	\have[\ ]{dm}{\enot \meta{A} \eor \enot \meta{B}}\dem{ab}
+
+	\have[m]{ab}{\enot \meta{A} \eor \enot \meta{B}}
+\\	\have[\ ]{dm}{\enot (\meta{A} \eand \meta{B})}\dem{ab}
+\end{nd}$

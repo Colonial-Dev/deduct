@@ -1,0 +1,31 @@
+$\begin{nd}
+\open
+	\hypo[i]{a}{\Box}
+	\have[j]{nb}{\meta{A}}
+\close
+\have[\hskip .8em]{na}{\Box\meta{A}}\by{$\Box$I}{a-nb}
+
+\have[i]{ab}{\Box\meta{A}}
+\\\open
+	\hypo[ ]{a}{\Box}
+	\have[j]{nb}{\meta{A}}\by{$\Box$E}{ab}
+\close
+
+	\have[m]{ab}{\enot \Box \enot \meta{A}}
+\\	\have[\ ]{dm}{\Diamond \meta{A}}\by{Def $\Diamond$}{ab}
+
+	\have[m]{ab}{\Diamond \meta{A}}
+\\	\have[\ ]{dm}{\enot \Box \enot \meta{A}}\by{Def $\Diamond$}{ab}
+
+	\have[m]{ab}{\enot \Box \meta{A}}
+\\	\have[\ ]{dm}{\Diamond \enot \meta{A}}\by{MC}{ab}
+
+	\have[m]{ab}{\Diamond \enot \meta{A}}
+\\	\have[\ ]{dm}{\enot \Box \meta{A}}\by{MC}{ab}
+
+	\have[m]{ab}{\enot \Diamond \meta{A}}
+\\	\have[\ ]{dm}{\Box \enot \meta{A}}\by{MC}{ab}
+
+	\have[m]{ab}{\Box \enot \meta{A}}
+\\	\have[\ ]{dm}{\enot \Diamond \meta{A}}\by{MC}{ab}
+\end{nd}$
