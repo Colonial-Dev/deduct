@@ -220,9 +220,12 @@ impl eframe::App for Deduct {
                             $ui.add(
                                 egui::Image::new(egui::include_image!($path))
                                     .tint(tint)
-                                    .fit_to_fraction(
-                                        Vec2::new(0.975, f32::INFINITY)
-                                    )
+                                    .fit_to_exact_size(
+                                        vec2(
+                                            if w * 0.225 > 275.0 { 275.0 } else { w * 0.225 },
+                                            f32::INFINITY
+                                        )
+                                    )                                    
                             );
                         };
                     }
