@@ -23,6 +23,7 @@ eframe = { version = "0.27.2", features = [
     "wgpu",          # Use the WGPU rendering backend.
     "persistence",   # Enable restoring app state when restarting the app.
 ] }
+image = { version = "0.24", default-features = false, features = ["png"] }
 
 # Errors
 thiserror = "1.0.58"

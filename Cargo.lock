@@ -848,6 +848,7 @@ dependencies = [
  "eframe",
  "egui",
  "egui_extras",
+ "image",
  "once_cell",
  "regex",
  "serde",
