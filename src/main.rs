@@ -1,3 +1,6 @@
+// Prevents Windows from opening a terminal when the executable is started
+#![windows_subsystem = "windows"]
+
 mod check;
 mod parse;
 mod ui;

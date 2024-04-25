@@ -18,12 +18,12 @@
 
 ## Installation
 
-### Web Version
+### Web Version (Recommended)
 Deduct is available as a web app [here](https://colonial-dev.github.io/deduct/). Use a laptop or desktop for the best experience.
 
 ### Precompiled Binaries
 Precompiled versions of Deduct are available for:
-- Windows
+- Windows (note that, although unlikely, you may need to install the Microsoft Visual C/++ Redistributables)
 - macOS
 - Linux (compiled against `x86_64-unknown-linux-musl`, which should Just Work™ on most distributions.) 
 

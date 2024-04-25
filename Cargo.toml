@@ -1,7 +1,7 @@
 [package]
 name        = "deduct"
 authors     = ["Colonial"]
-version     = "1.0.0"
+version     = "1.0.1"
 edition     = "2021"
 description = "A Fitch-style natural deduction proof checker, with support for modal logic."
 repository  = "https://github.com/Colonial-Dev/deduct"
@@ -18,7 +18,7 @@ opt-level = 2
 
 [dependencies]
 # GUI
-egui = "0.27.2"
+egui = { version = "0.27.2", features = ["accesskit"] }
 eframe = { version = "0.27.2", features = [
     "wgpu",          # Use the WGPU rendering backend.
     "persistence",   # Enable restoring app state when restarting the app.

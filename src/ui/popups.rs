@@ -223,6 +223,11 @@ impl Widget for &mut Preferences {
 
 impl Default for Preferences {
     fn default() -> Self {
-        Self { dark_mode: true, ui_scale: 0 }
+        // On WASM, bump the default UI scale to 125% as most browsers will be fullscreened.
+        if cfg!(target_arch = "wasm32") {
+            Self { dark_mode: true, ui_scale: 1 }
+        } else {
+            Self { dark_mode: true, ui_scale: 0 }
+        }
     }
 }

@@ -56,19 +56,25 @@ const NEW_SO: KeyboardShortcut = KeyboardShortcut::new(
 
 const UI_ZOOM_FACTORS: [f32; 5] = [1.0, 1.25, 1.50, 1.75, 2.0];
 
+/// Top-level application state.
 #[derive(Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct Deduct {
+    /// The current proof, if any.
     #[serde(skip)]
     proof : Option<proof::ProofUi>,
+    /// Popup window visibilities.
     #[serde(skip)]
     vis   : popups::Visibility,
+    /// New proof popup state.
     #[serde(skip)]
     new   : popups::NewProof,
+    /// Preferences popup state.
     prefs : popups::Preferences,
 }
 
 impl Deduct {
+    /// Called once on startup.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         egui_extras::install_image_loaders(&cc.egui_ctx);
 
@@ -90,6 +96,8 @@ impl Deduct {
         Default::default()
     }
 
+    /// Try and use the input from the new proof popup
+    /// to start a new proof.
     pub fn try_new_proof(&mut self) {
         if let Some(ui) = self.new.try_create() {
             self.proof = Some(ui);
@@ -98,6 +106,7 @@ impl Deduct {
         self.new.ready = false;
     }
 
+    /// Handle keyboard shortcuts.
     fn handle_shortcuts(&mut self, ctx: &Context) {
         let mut op = None;
 
@@ -153,6 +162,7 @@ impl eframe::App for Deduct {
 
         self.handle_shortcuts(ctx);
 
+        // Render top menu bar.
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
                 ui.menu_button("Proof", |ui| {
@@ -207,6 +217,7 @@ impl eframe::App for Deduct {
 
         });
 
+        // Render quick reference side bar.
         egui::SidePanel::right("proof_rules")
             .resizable(false)
             .min_width(w * 0.25)
@@ -303,8 +314,10 @@ impl eframe::App for Deduct {
                 });
         });
 
+        // Render central panel.
         egui::CentralPanel::default()
             .show(ctx, |ui| {
+                // If we don't have a proof, display a placeholder message.
                 let Some(proof) = &mut self.proof else {
                     ui.with_layout(
                         Layout::centered_and_justified(Direction::TopDown),
@@ -337,6 +350,7 @@ impl eframe::App for Deduct {
     }
 }
 
+/// Render the about window.
 fn about(ui: &mut Ui) {
     let title_font = FontId::new(
         40.0,
@@ -353,7 +367,7 @@ fn about(ui: &mut Ui) {
         ui.label("A Fitch-style natural deduction proof checker.");
         
         ui.label(
-            RichText::new("Built with love by Colonial, using Rust and egui!").weak().italics()
+            RichText::new("Built with love by Colonial using Rust and egui!").weak().italics()
         );
 
         ui.separator();
@@ -385,6 +399,7 @@ fn about(ui: &mut Ui) {
     });
 }
 
+/// Render the shortcut info window.
 fn shortcuts(ui: &mut Ui) {
     ui.label("All shortcuts act on the currently selected line or (if no line is selected) the last line.");
     ui.separator();
@@ -438,6 +453,7 @@ fn shortcuts(ui: &mut Ui) {
     });
 }
 
+/// Load LaTeX `Latin Modern Math` font into memory under the name `math`.
 fn fonts_init(cc: &eframe::CreationContext<'_>) {
     let mut fonts = FontDefinitions::default();
 
@@ -454,6 +470,7 @@ fn fonts_init(cc: &eframe::CreationContext<'_>) {
     cc.egui_ctx.set_fonts(fonts);
 }
 
+/// Return the current width and height of the window.
 fn window_size(ui: &Ui) -> (f32, f32) {
     let w = ui.ctx().input(|i| {
         let r = i.screen_rect().x_range();
@@ -468,6 +485,7 @@ fn window_size(ui: &Ui) -> (f32, f32) {
     (w, h)
 }
 
+/// Generate a dummy [`Response`] that does not influence the UI.
 fn dummy_response(ui: &mut Ui) -> Response {
     ui.allocate_response(
         Vec2::ZERO,
@@ -475,6 +493,7 @@ fn dummy_response(ui: &mut Ui) -> Response {
     )
 }
 
+/// Create a new popup window with the given title and open flag.
 fn new_window<'a>(title: &'static str, open: &'a mut bool) -> Window<'a> {
     egui::Window::new(title)
         .default_open(true)
