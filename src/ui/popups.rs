@@ -146,12 +146,14 @@ impl Widget for &mut NewProof {
                     .hint_text("Premises...")
                     .font(font.clone())
                     .desired_width(f32::INFINITY)
+                    .margin(Margin::symmetric(0.0, 0.0))
                     .show(ui);
 
                 let c = TextEdit::singleline(&mut self.conclusion)
                     .hint_text("Conclusion...")
                     .font(font.clone())
                     .desired_width(f32::INFINITY)
+                    .margin(Margin::symmetric(0.0, 0.0))
                     .show(ui);
 
                 if p

@@ -36,7 +36,7 @@ Dependencies:
 
 Just use `cargo install`, and Deduct will be compiled and added to your `PATH`.
 ```sh
-cargo install --locked --git https://github.com/Colonial-Dev/deduct --branch master
+cargo install --locked --git https://github.com/Colonial-Dev/deduct deduct
 ```
 
 ## Getting Started
