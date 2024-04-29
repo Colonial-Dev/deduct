@@ -237,7 +237,7 @@ fn check_strict_nesting(p: &Proof, s: u16, e: u16) -> Result<(), CheckError> {
     let mut depth = 0_u16;
     let mut nest  = 0_u16;
 
-    for n in s..e {
+    for n in s..=e {
         let line = p.line(n).unwrap();
 
         if line.s.is_nec_signal() {
