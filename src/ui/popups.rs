@@ -143,7 +143,7 @@ impl Widget for &mut NewProof {
 
             ui.vertical(|ui| {
                 let p = TextEdit::singleline(&mut self.premises)
-                    .hint_text("Premises...")
+                    .hint_text("Premises... (separate with commas)")
                     .font(font.clone())
                     .desired_width(f32::INFINITY)
                     .margin(Margin::symmetric(0.0, 0.0))

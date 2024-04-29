@@ -40,7 +40,9 @@ cargo install --locked --git https://github.com/Colonial-Dev/deduct deduct
 ```
 
 ## Getting Started
-You can start a new proof by navigating to `Proof` > `New...` in the menu bar. Select which rulesets you'd like to enable, enter your premises (if any) and conclusion, and hit `Create proof`. If your sentences are well formed, the window will close and you can start working on the proof.
+I recommend you use the [web version](https://colonial-dev.github.io/deduct/).
+
+You can start a new proof by navigating to `Proof` > `New...` in the menu bar. Select which rulesets you'd like to enable, enter your premises (if any) and conclusion, and hit `Create proof`. If your sentences are well formed, the window will close and you can start working.
 
 ### Tips
 - If you would prefer light mode or a larger UI, both can be adjusted under `Preferences` in the menu bar. Your choices will be remembered even if you close and re-open Deduct.
@@ -50,6 +52,7 @@ You can start a new proof by navigating to `Proof` > `New...` in the menu bar. S
 ### Control
 - You can add and remove lines or subproofs by hovering over the relevant line and clicking the buttons that appear to the right of the citation field.
 - All insertion actions also have keyboard shortcuts. The exact keys vary between platforms; look at `Help` > `Shortcuts` in the menu bar to find yours.
+- `TAB` works like you would expect, including inside the proof UI. (Example: while editing a sentence, `TAB` will move the cursor to its citation field.)
 - Whenever you edit a field or remove a line, the proof checker will automatically execute and display its output at the bottom of the window. 
   - (Adding a line or subproof does not trigger the checker.)
 
