@@ -520,20 +520,8 @@ impl Rule for NegationElim {
             return Err(CheckError::BadUsage)
         };
 
-        if let Sentence::Neg(s_1) = s_1 {
-            if s_1 == s_2 {
-                return Ok(())
-            } else {
-                return Err(CheckError::BadUsage)
-            }
-        }
-
-        if let Sentence::Neg(s_2) = s_2 {
-            if s_2 == s_1 {
-                return Ok(())
-            } else {
-                return Err(CheckError::BadUsage)
-            }
+        if s_1.negated() == *s_2 || s_2.negated() == *s_1 {
+            return Ok(())
         }
 
         Err(CheckError::BadUsage)

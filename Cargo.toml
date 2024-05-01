@@ -1,7 +1,7 @@
 [package]
 name        = "deduct"
 authors     = ["Colonial"]
-version     = "1.0.2"
+version     = "1.0.3"
 edition     = "2021"
 description = "A Fitch-style natural deduction proof checker, with support for modal logic."
 repository  = "https://github.com/Colonial-Dev/deduct"
