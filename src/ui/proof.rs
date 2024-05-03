@@ -191,7 +191,7 @@ impl ProofUi {
                 if end == n {
                     self.lines.remove(n);
                 } else {
-                    self.lines.drain(n..end); 
+                    self.lines.drain(n..=end); 
                 }
             }
             else {
